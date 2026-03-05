@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KiitKaadda – Token Display</title>
+<meta name="theme-color" content="#ff5c35">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0e11;--surface:#1a1820;--surface2:#231f2e;
+  --accent:#ff5c35;--accent2:#ffb800;--accent3:#00d97e;
+  --text:#f0edf8;--text2:#b0abc5;--muted:#6b6480;
+  --fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
+}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--fb);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:24px;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(255,92,53,.12) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 50% at 80% 90%,rgba(0,217,126,.08) 0%,transparent 60%);
+  pointer-events:none;
+}
+.td-wrap{width:100%;max-width:700px;position:relative;z-index:1}
+.td-brand{font-family:var(--fh);font-size:18px;font-weight:800;color:var(--accent);text-align:center;margin-bottom:32px;opacity:.7}
+.td-main{
+  background:var(--surface);border:2px solid rgba(0,217,126,.35);
+  border-radius:28px;padding:40px 32px;text-align:center;margin-bottom:20px;
+  box-shadow:0 0 60px rgba(0,217,126,.1);
+}
+.td-lbl{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.td-serving{font-family:var(--fh);font-size:96px;font-weight:800;color:var(--accent3);line-height:1;letter-spacing:-2px}
+.td-sub{font-size:16px;color:var(--text2);margin-top:10px}
+.td-next{
+  background:var(--surface2);border:1.5px solid rgba(255,255,255,.08);
+  border-radius:20px;padding:24px 28px;
+}
+.td-next-lbl{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.td-next-tokens{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.td-ntok{
+  background:var(--surface);border:1.5px solid rgba(255,184,0,.25);
+  border-radius:14px;padding:14px 22px;
+  font-family:var(--fh);font-size:28px;font-weight:800;color:var(--accent2);
+}
+.td-fc-filter{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+.td-fc-btn{
+  padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;
+  background:var(--surface);border:1.5px solid rgba(255,255,255,.1);color:var(--muted);
+  transition:all .2s;font-family:var(--fb);
+}
+.td-fc-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.td-fc-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.td-status-row{display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.td-stat{background:var(--surface);border:1.5px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 20px;text-align:center;min-width:90px}
+.td-stat-n{font-family:var(--fh);font-size:26px;font-weight:800}
+.td-stat-l{font-size:11px;color:var(--muted);margin-top:3px}
+.td-blink{animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</head>
+<body>
+<div class="td-wrap">
+  <div class="td-brand">🍛 KiitKaadda · Token Display</div>
+
+  <!-- Food court filter -->
+  <div class="td-fc-filter">
+    <button class="td-fc-btn active" id="fcb-all" onclick="setFC('all')">All Courts</button>
+    <button class="td-fc-btn" id="fcb-FC1" onclick="setFC('FC1')">FC1</button>
+    <button class="td-fc-btn" id="fcb-FC2" onclick="setFC('FC2')">FC2</button>
+    <button class="td-fc-btn" id="fcb-FC3" onclick="setFC('FC3')">FC3</button>
+    <button class="td-fc-btn" id="fcb-FC4" onclick="setFC('FC4')">FC4</button>
+  </div>
+
+  <!-- Now serving -->
+  <div class="td-main">
+    <div class="td-lbl">Now Serving</div>
+    <div class="td-serving td-blink" id="td-now">–</div>
+    <div class="td-sub" id="td-now-fc">Waiting for orders…</div>
+  </div>
+
+  <!-- Next tokens -->
+  <div class="td-next">
+    <div class="td-next-lbl">Up Next</div>
+    <div class="td-next-tokens" id="td-next">
+      <span style="color:var(--muted);font-size:14px;">No upcoming orders</span>
+    </div>
+  </div>
+
+  <!-- Quick stats -->
+  <div class="td-status-row">
+    <div class="td-stat">
+      <div class="td-stat-n" id="ts-new" style="color:var(--accent3)">0</div>
+      <div class="td-stat-l">New</div>
+    </div>
+    <div class="td-stat">
+      <div class="td-stat-n" id="ts-prep" style="color:var(--accent2)">0</div>
+      <div class="td-stat-l">Preparing</div>
+    </div>
+    <div class="td-stat">
+      <div class="td-stat-n" id="ts-ready" style="color:var(--accent)">0</div>
+      <div class="td-stat-l">Ready</div>
+    </div>
+    <div class="td-stat">
+      <div class="td-stat-n" id="ts-done" style="color:var(--muted)">0</div>
+      <div class="td-stat-l">Done Today</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const FIREBASE_CFG = {
+  apiKey: "AIzaSyCbqQji9tEeBBUiJsM2y2-GgXlbHevMi2M",
+  authDomain: "kiitkaadda.firebaseapp.com",
+  projectId: "kiitkaadda",
+  storageBucket: "kiitkaadda.firebasestorage.app",
+  messagingSenderId: "328400914164",
+  appId: "1:328400914164:web:40c08e40aa198c1f8c00a1",
+  measurementId: "G-6LJLET1CW7"
+};
+
+import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+let allOrders = [];
+let selectedFC = 'all';
+
+window.setFC = function(fc) {
+  selectedFC=fc;
+  document.querySelectorAll('.td-fc-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('fcb-'+fc)?.classList.add('active');
+  render();
+};
+
+try {
+  const fbApp = initializeApp(firebaseConfig);
+  const db    = getFirestore(fbApp);
+  const q     = query(collection(db,'orders'), orderBy('timestamp','desc'));
+  onSnapshot(q, snap=>{
+    allOrders = snap.docs.map(d=>({_id:d.id,...d.data()}));
+    render();
+  });
+} catch(e) {
+  // Demo fallback
+  allOrders = [
+    {_id:'d1',tokenNumber:104,token:'#104',fc:'FC1',status:'ready',studentName:'Demo'},
+    {_id:'d2',tokenNumber:105,token:'#105',fc:'FC1',status:'preparing',studentName:'Demo'},
+    {_id:'d3',tokenNumber:106,token:'#106',fc:'FC1',status:'new',studentName:'Demo'},
+    {_id:'d4',tokenNumber:107,token:'#107',fc:'FC2',status:'new',studentName:'Demo'},
+  ];
+  render();
+}
+
+function render() {
+  const orders = selectedFC==='all' ? allOrders : allOrders.filter(o=>o.fc===selectedFC);
+
+  // "Ready" tokens are being served
+  const ready     = orders.filter(o=>o.status==='ready').sort((a,b)=>(a.tokenNumber||0)-(b.tokenNumber||0));
+  const preparing = orders.filter(o=>o.status==='preparing').sort((a,b)=>(a.tokenNumber||0)-(b.tokenNumber||0));
+  const newOrds   = orders.filter(o=>o.status==='new').sort((a,b)=>(a.tokenNumber||0)-(b.tokenNumber||0));
+
+  const nowEl = document.getElementById('td-now');
+  const nowFC = document.getElementById('td-now-fc');
+
+  if(ready.length) {
+    const o = ready[0];
+    nowEl.textContent   = o.token||(o.tokenNumber?'#'+o.tokenNumber:'–');
+    nowFC.textContent   = (o.fc||'') + ' · ' + (o.studentName||'');
+  } else {
+    nowEl.textContent = '–';
+    nowFC.textContent = 'No tokens ready yet';
+  }
+
+  // Next tokens: remaining ready + preparing + new (up to 6)
+  const upcoming = [...ready.slice(1), ...preparing, ...newOrds].slice(0,6);
+  const nextEl   = document.getElementById('td-next');
+  if(upcoming.length){
+    nextEl.innerHTML = upcoming.map(o=>
+      `<div class="td-ntok">${o.token||(o.tokenNumber?'#'+o.tokenNumber:'–')}</div>`
+    ).join('');
+  } else {
+    nextEl.innerHTML = '<span style="color:var(--muted);font-size:14px;">No upcoming orders</span>';
+  }
+
+  // Stats
+  const counts = {new:0,preparing:0,ready:0,completed:0};
+  orders.forEach(o=>{ if(counts[o.status]!==undefined) counts[o.status]++; });
+  document.getElementById('ts-new').textContent   = counts.new;
+  document.getElementById('ts-prep').textContent  = counts.preparing;
+  document.getElementById('ts-ready').textContent = counts.ready;
+  document.getElementById('ts-done').textContent  = counts.completed;
+}
+</script>
+</body>
+</html>

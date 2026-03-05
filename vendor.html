@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>KiitKaadda – Vendor Dashboard</title>
+<meta name="theme-color" content="#FF6B35">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<!-- Shared app styles + vendor dashboard styles -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="vd-body">
+
+<!-- ══ NOTIFICATION SOUND ══ -->
+<audio id="ding" preload="auto">
+  <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YVoGAACBgIF/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/gX+Bf4F/" type="audio/wav">
+</audio>
+
+<!-- ══ TOAST CONTAINER (uses existing .tcon / .toast from style.css) ══ -->
+<div class="tcon" id="tc"></div>
+
+<!-- ══════════════════════════════════
+     TOP BAR
+══════════════════════════════════════ -->
+<div class="vd-topbar">
+  <div class="vd-topbar-left">
+    <div class="vd-logo">KiitKaadda</div>
+    <div class="vd-sub" id="v-sub">Connecting…</div>
+  </div>
+  <div class="vd-topbar-right">
+    <div id="v-new-badge" class="vd-new-badge" style="display:none;">0 New</div>
+    <span class="vd-shop-lbl" id="shopLbl">CLOSED</span>
+    <label class="vd-toggle">
+      <input type="checkbox" id="shopToggleTop" onchange="toggleShop(this)">
+      <span class="vd-track"></span>
+    </label>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     MAIN CONTENT (three tab panels)
+══════════════════════════════════════ -->
+<div class="vd-main">
+
+  <!-- ════════ ORDERS TAB ════════ -->
+  <div class="vd-tab-panel active" id="tab-orders">
+
+    <!-- Stats row -->
+    <div class="vd-stats-row">
+      <div class="vd-stat-card">
+        <div class="vd-stat-num" id="stat-pending" style="color:#E67E22">0</div>
+        <div class="vd-stat-lbl">Pending</div>
+      </div>
+      <div class="vd-stat-card">
+        <div class="vd-stat-num" id="stat-prep" style="color:#2980B9">0</div>
+        <div class="vd-stat-lbl">Preparing</div>
+      </div>
+      <div class="vd-stat-card">
+        <div class="vd-stat-num" id="stat-ready" style="color:#27AE60">0</div>
+        <div class="vd-stat-lbl">Ready</div>
+      </div>
+      <div class="vd-stat-card">
+        <div class="vd-stat-num" id="stat-done" style="color:#BDB0A0">0</div>
+        <div class="vd-stat-lbl">Done</div>
+      </div>
+    </div>
+
+    <!-- Pending section (always first) -->
+    <div class="vd-sec-lbl">🕐 Pending <span class="vd-badge" id="badgePending">0</span></div>
+    <div id="pendingList"></div>
+
+    <!-- Preparing section -->
+    <div class="vd-sec-lbl">🔥 Preparing <span class="vd-badge vd-badge-blue" id="badgePreparing">0</span></div>
+    <div id="preparingList"></div>
+
+    <!-- Ready section -->
+    <div class="vd-sec-lbl">✅ Ready <span class="vd-badge vd-badge-green" id="badgeReady">0</span></div>
+    <div id="readyList"></div>
+
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- ════════ MENU TAB ════════ -->
+  <div class="vd-tab-panel" id="tab-menu">
+    <div class="vd-sec-head">
+      <div class="vd-sec-title">Menu Items</div>
+    </div>
+
+    <!-- Category filter chips -->
+    <div class="vd-cat-scroll" id="catRow">
+      <div class="vd-chip active" onclick="filterCat('All',this)">All</div>
+      <div class="vd-chip" onclick="filterCat('Main',this)">🍛 Main</div>
+      <div class="vd-chip" onclick="filterCat('Snacks',this)">🍟 Snacks</div>
+      <div class="vd-chip" onclick="filterCat('Tea',this)">☕ Tea</div>
+      <div class="vd-chip" onclick="filterCat('Drinks',this)">🥤 Drinks</div>
+      <div class="vd-chip" onclick="filterCat('Others',this)">🍽️ Others</div>
+    </div>
+
+    <div id="menuList"></div>
+
+    <div class="vd-add-wrap">
+      <button class="vd-btn vd-btn-orange vd-btn-lg" onclick="openAddModal()">＋ Add Menu Item</button>
+    </div>
+  </div>
+
+  <!-- ════════ PROFILE TAB ════════ -->
+  <div class="vd-tab-panel" id="tab-profile">
+
+    <!-- Hero -->
+    <div class="vd-prof-hero">
+      <div class="vd-prof-avatar">🏪</div>
+      <div class="vd-prof-name" id="profDisplayName">KIIT Canteen</div>
+      <div class="vd-prof-sub">Vendor Account</div>
+    </div>
+
+    <!-- Earnings card -->
+    <div class="vd-earn-card">
+      <div class="vd-earn-lbl">Today's Earnings</div>
+      <div class="vd-earn-amt" id="earn-revenue">₹0</div>
+      <div class="vd-earn-sub" id="earn-sub">Updated live</div>
+      <div class="vd-earn-row">
+        <div class="vd-earn-mini">
+          <div class="vd-earn-mini-l">Orders Today</div>
+          <div class="vd-earn-mini-v" id="earn-orders">0</div>
+        </div>
+        <div class="vd-earn-mini">
+          <div class="vd-earn-mini-l">Completed</div>
+          <div class="vd-earn-mini-v" id="earn-done">0</div>
+        </div>
+        <div class="vd-earn-mini">
+          <div class="vd-earn-mini-l">This Week</div>
+          <div class="vd-earn-mini-v" id="earn-week">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile fields -->
+    <div class="vd-pf-fields">
+      <div class="vd-pf-field">
+        <div class="vd-pf-label">Shop Name</div>
+        <div class="vd-pf-row">
+          <div class="vd-pf-val" id="pShopName">KIIT Canteen</div>
+          <button class="vd-icon-btn vd-ib-edit" onclick="editProfField('shopName')">✏️</button>
+        </div>
+      </div>
+      <div class="vd-pf-field">
+        <div class="vd-pf-label">Phone Number</div>
+        <div class="vd-pf-row">
+          <div class="vd-pf-val" id="pPhone">+91 98765 43210</div>
+          <button class="vd-icon-btn vd-ib-edit" onclick="editProfField('phone')">✏️</button>
+        </div>
+      </div>
+      <div class="vd-pf-field">
+        <div class="vd-pf-label">UPI ID</div>
+        <div class="vd-pf-row">
+          <div class="vd-pf-val" id="pUpi">kiitcanteen@upi</div>
+          <button class="vd-icon-btn vd-ib-edit" onclick="editProfField('upi')">✏️</button>
+        </div>
+      </div>
+      <div class="vd-pf-field">
+        <div class="vd-pf-label">Shop Status</div>
+        <div class="vd-pf-row">
+          <div class="vd-pf-val" id="pShopStatus">🔴 Closed</div>
+          <label class="vd-toggle">
+            <input type="checkbox" id="shopToggleProfile" onchange="toggleShop(this)">
+            <span class="vd-track"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <div style="padding:0 16px 8px;">
+      <button class="vd-btn vd-btn-red vd-btn-lg" onclick="vendorLogout()">🚪 Logout</button>
+    </div>
+    <div style="height:24px;"></div>
+  </div>
+
+</div><!-- end vd-main -->
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav class="vd-bnav">
+  <button class="vd-nb" id="navOrders" onclick="switchTab('orders')">
+    <span class="vd-nb-icon">📋</span>Orders
+  </button>
+  <button class="vd-nb" id="navMenu" onclick="switchTab('menu')">
+    <span class="vd-nb-icon">🍽️</span>Menu
+  </button>
+  <button class="vd-nb" id="navProfile" onclick="switchTab('profile')">
+    <span class="vd-nb-icon">👤</span>Profile
+  </button>
+</nav>
+
+<!-- ══ ITEM MODAL ══ -->
+<div class="vd-overlay" id="itemModal" onclick="vdOutsideClose(event,'itemModal')">
+  <div class="vd-sheet">
+    <div class="vd-handle"></div>
+    <div class="vd-sheet-title" id="itemModalTitle">Add Menu Item</div>
+    <div class="vd-fg">
+      <label>Item Name</label>
+      <input class="vd-fi" type="text" id="iName" placeholder="e.g. Veg Thali">
+    </div>
+    <div class="vd-fg-row">
+      <div class="vd-fg">
+        <label>Price (₹)</label>
+        <input class="vd-fi" type="number" id="iPrice" placeholder="60" min="1">
+      </div>
+      <div class="vd-fg">
+        <label>Category</label>
+        <select class="vd-fi vd-select" id="iCat">
+          <option>Main</option>
+          <option>Snacks</option>
+          <option>Tea</option>
+          <option>Drinks</option>
+          <option>Others</option>
+        </select>
+      </div>
+    </div>
+    <div class="vd-fg">
+      <label>Emoji / Image URL (optional)</label>
+      <input class="vd-fi" type="text" id="iEmoji" placeholder="🍛 or https://…">
+    </div>
+    <div class="vd-avail-row">
+      <label class="vd-toggle">
+        <input type="checkbox" id="iAvail" checked>
+        <span class="vd-track"></span>
+      </label>
+      <span class="vd-avail-lbl">Available</span>
+    </div>
+    <button class="vd-btn vd-btn-orange vd-btn-lg" onclick="saveItem()">Save Item</button>
+    <div style="height:10px;"></div>
+    <button class="vd-btn vd-btn-ghost vd-btn-lg" onclick="vdCloseModal('itemModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ PREP TIME MODAL ══ -->
+<div class="vd-overlay" id="prepModal" onclick="vdOutsideClose(event,'prepModal')">
+  <div class="vd-sheet">
+    <div class="vd-handle"></div>
+    <div class="vd-sheet-title">Set Prep Time & Accept</div>
+    <div class="vd-fg">
+      <label>Order</label>
+      <div class="vd-fi" id="prepOrderId" style="padding:13px 14px;font-weight:600;"></div>
+    </div>
+    <div class="vd-fg">
+      <label>Prep Time</label>
+      <div class="vd-pt-row" id="prepTimeRow">
+        <div class="vd-pt-btn" onclick="selectPT(3,this)">3 min</div>
+        <div class="vd-pt-btn" onclick="selectPT(5,this)">5 min</div>
+        <div class="vd-pt-btn" onclick="selectPT(8,this)">8 min</div>
+        <div class="vd-pt-btn" onclick="selectPT(10,this)">10 min</div>
+        <div class="vd-pt-btn" onclick="selectPT(15,this)">15 min</div>
+      </div>
+    </div>
+    <button class="vd-btn vd-btn-green vd-btn-lg" id="prepAcceptBtn" onclick="confirmAccept()">✅ Accept Order</button>
+    <div style="height:10px;"></div>
+    <button class="vd-btn vd-btn-ghost vd-btn-lg" onclick="vdCloseModal('prepModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ PROFILE EDIT MODAL ══ -->
+<div class="vd-overlay" id="profModal" onclick="vdOutsideClose(event,'profModal')">
+  <div class="vd-sheet">
+    <div class="vd-handle"></div>
+    <div class="vd-sheet-title" id="profModalTitle">Edit</div>
+    <div class="vd-fg">
+      <label id="profEditLbl">Value</label>
+      <input class="vd-fi" type="text" id="profEditInput">
+    </div>
+    <button class="vd-btn vd-btn-orange vd-btn-lg" onclick="saveProfField()">Save</button>
+    <div style="height:10px;"></div>
+    <button class="vd-btn vd-btn-ghost vd-btn-lg" onclick="vdCloseModal('profModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     FIREBASE + DASHBOARD LOGIC  (type="module" keeps
+     existing import() syntax; all handlers bound to
+     window so inline onclick attributes work)
+══════════════════════════════════════════════════════ -->
+<script type="module">
+
+/* ─────────────────────────────────────────────────
+   FIREBASE CONFIG  ← paste your real credentials here
+   (must match script.js / token-display.html)
+───────────────────────────────────────────────────── */
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import {
+  getFirestore, collection, onSnapshot,
+  doc, updateDoc, addDoc, deleteDoc,
+  query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+/* ─────────────────────────────────────────────────
+   AUTH GUARD  – vendor role only
+───────────────────────────────────────────────────── */
+const AK = 'kk_auth';
+let vendorAuth = {};
+try { vendorAuth = JSON.parse(localStorage.getItem(AK) || '{}'); } catch(e) {}
+if (!vendorAuth.in || vendorAuth.role !== 'vendor') {
+  window.location.href = 'index.html';
+}
+
+/* ─────────────────────────────────────────────────
+   FIREBASE INIT
+───────────────────────────────────────────────────── */
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+
+/* ─────────────────────────────────────────────────
+   SHARED STATE
+───────────────────────────────────────────────────── */
+let allOrders    = [];       // live from Firestore
+let menuItems    = [];       // live from Firestore 'menuItems' collection
+let prevNewCount = 0;        // for ding-on-new-order
+let shopOpen     = false;
+let catFilter    = 'All';
+let editingId    = null;     // menu item being edited (Firestore _id)
+let editingProf  = null;     // which profile field
+let pendingPrepId   = null;  // order being accepted in prep modal
+let selectedPrepTime = null;
+
+/* ─────────────────────────────────────────────────
+   HELPER – today's date string  "YYYY-MM-DD"
+───────────────────────────────────────────────────── */
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+/* ─────────────────────────────────────────────────
+   TOAST  (uses existing .tcon / .toast in style.css)
+───────────────────────────────────────────────────── */
+function vToast(msg, type = '') {
+  const c  = document.getElementById('tc');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'tOut .3s ease forwards';
+    setTimeout(() => el.remove(), 300);
+  }, 2600);
+}
+window.toast = vToast; // keep compatible with existing index.html calls
+
+/* ─────────────────────────────────────────────────
+   NOTIFICATION SOUND
+───────────────────────────────────────────────────── */
+function tryDing() {
+  try {
+    const a = document.getElementById('ding');
+    if (a) { a.currentTime = 0; a.play().catch(() => {}); }
+  } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════════════
+   TAB NAVIGATION
+═══════════════════════════════════════════════════ */
+function switchTab(tab) {
+  ['orders', 'menu', 'profile'].forEach(t => {
+    document.getElementById('tab-' + t)
+      .classList.toggle('active', t === tab);
+    const nb = document.getElementById('nav' +
+      t.charAt(0).toUpperCase() + t.slice(1));
+    if (nb) nb.classList.toggle('active', t === tab);
+  });
+  if (tab === 'menu')    renderMenu();
+  if (tab === 'orders')  renderOrders();
+  if (tab === 'profile') renderProfile();
+}
+window.switchTab = switchTab;
+
+/* ═══════════════════════════════════════════════════
+   SHOP TOGGLE (topbar + profile in sync)
+═══════════════════════════════════════════════════ */
+function toggleShop(el) {
+  shopOpen = el.checked;
+  document.getElementById('shopToggleTop').checked     = shopOpen;
+  document.getElementById('shopToggleProfile').checked = shopOpen;
+  const lbl = document.getElementById('shopLbl');
+  const ps  = document.getElementById('pShopStatus');
+  lbl.textContent = shopOpen ? 'OPEN' : 'CLOSED';
+  lbl.classList.toggle('open', shopOpen);
+  if (ps) ps.textContent = shopOpen ? '🟢 Open' : '🔴 Closed';
+  vToast(shopOpen ? '🟢 Shop is now OPEN' : '🔴 Shop is now CLOSED', 's');
+}
+window.toggleShop = toggleShop;
+
+/* ═══════════════════════════════════════════════════
+   ██████  ORDERS  ██████
+═══════════════════════════════════════════════════ */
+
+/* ── Firestore live listener ── */
+const ordQ = query(collection(db, 'orders'), orderBy('timestamp', 'desc'));
+onSnapshot(ordQ, snap => {
+  allOrders = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+
+  const newNow = allOrders.filter(o => o.status === 'new' || o.status === 'pending').length;
+  if (newNow > prevNewCount) tryDing();
+  prevNewCount = newNow;
+
+  renderOrders();
+  renderStats();
+  renderEarnings();
+
+  document.getElementById('v-sub').textContent =
+    'Logged in as ' + (vendorAuth.name || 'Vendor') + ' · 🟢 Live';
+
+}, err => {
+  console.error('Firestore error:', err);
+  document.getElementById('v-sub').textContent =
+    'Firebase not configured – demo mode';
+  loadDemoOrders();
+});
+
+/* ── Demo fallback ── */
+function loadDemoOrders() {
+  allOrders = [
+    { _id:'d1', orderId:'ORD-101', tokenNumber:101, token:'#101',
+      fc:'FC1', studentName:'Naveen',
+      items:[{name:'Masala Dosa',qty:2},{name:'Filter Coffee',qty:1}],
+      itemNames:['Masala Dosa','Filter Coffee'],
+      totalPrice:142, status:'new',
+      timestamp:{ seconds: Date.now()/1000 } },
+    { _id:'d2', orderId:'ORD-102', tokenNumber:102, token:'#102',
+      fc:'FC2', studentName:'Priya',
+      items:[{name:'Veg Fried Rice',qty:1},{name:'Spring Rolls',qty:2}],
+      itemNames:['Veg Fried Rice','Spring Rolls'],
+      totalPrice:200, status:'preparing', prepTime:5,
+      timestamp:{ seconds: Date.now()/1000 - 300 } },
+    { _id:'d3', orderId:'ORD-103', tokenNumber:103, token:'#103',
+      fc:'FC3', studentName:'Arjun',
+      items:[{name:'Paneer Frankie',qty:1}],
+      itemNames:['Paneer Frankie'],
+      totalPrice:72, status:'ready',
+      timestamp:{ seconds: Date.now()/1000 - 600 } },
+    { _id:'d4', orderId:'ORD-100', tokenNumber:100, token:'#100',
+      fc:'FC1', studentName:'Kavya',
+      items:[{name:'Idli Sambar',qty:2}],
+      itemNames:['Idli Sambar'],
+      totalPrice:82, status:'completed',
+      timestamp:{ seconds: Date.now()/1000 - 900 } },
+  ];
+  renderOrders(); renderStats(); renderEarnings();
+}
+
+/* ── Stats row ── */
+function renderStats() {
+  const c = { new:0, preparing:0, ready:0, completed:0 };
+  allOrders.forEach(o => {
+    const k = o.status === 'pending' ? 'new' : o.status;
+    if (c[k] !== undefined) c[k]++;
+  });
+  document.getElementById('stat-pending').textContent = c.new;
+  document.getElementById('stat-prep').textContent    = c.preparing;
+  document.getElementById('stat-ready').textContent   = c.ready;
+  document.getElementById('stat-done').textContent    = c.completed;
+
+  const nc = c.new;
+  const badge = document.getElementById('v-new-badge');
+  badge.style.display = nc > 0 ? 'block' : 'none';
+  badge.textContent   = nc + ' New';
+}
+
+/* ── Earnings ── */
+function renderEarnings() {
+  const today    = todayStr();
+  const todayOrd = allOrders.filter(o => {
+    if (!o.timestamp?.seconds) return true;
+    return new Date(o.timestamp.seconds * 1000).toISOString().slice(0,10) === today;
+  });
+  const done    = todayOrd.filter(o => o.status === 'completed');
+  const revenue = todayOrd.reduce((s, o) => s + (o.totalPrice || 0), 0);
+  document.getElementById('earn-revenue').textContent = '₹' + revenue;
+  document.getElementById('earn-orders').textContent  = todayOrd.length;
+  document.getElementById('earn-done').textContent    = done.length;
+}
+
+/* ── Render orders into 3 labelled sections ── */
+function renderOrders() {
+  /* Normalise: Firestore uses 'new'; new UI uses 'pending' – treat both the same */
+  const norm = o => ({ ...o, _status: (o.status === 'new' ? 'pending' : o.status) });
+  const normed = allOrders.map(norm);
+
+  const pending   = normed.filter(o => o._status === 'pending');
+  const preparing = normed.filter(o => o._status === 'preparing');
+  const ready     = normed.filter(o => o._status === 'ready');
+
+  document.getElementById('badgePending').textContent   = pending.length;
+  document.getElementById('badgePreparing').textContent = preparing.length;
+  document.getElementById('badgeReady').textContent     = ready.length;
+
+  document.getElementById('pendingList').innerHTML =
+    pending.length   ? pending.map(pendingCard).join('')
+                     : emptyState('No pending orders', '👍');
+
+  document.getElementById('preparingList').innerHTML =
+    preparing.length ? preparing.map(preparingCard).join('')
+                     : emptyState('Nothing preparing yet', '🍳');
+
+  document.getElementById('readyList').innerHTML =
+    ready.length     ? ready.map(readyCard).join('')
+                     : emptyState('No ready orders', '🎉');
+}
+
+function emptyState(msg, icon) {
+  return `<div class="vd-empty"><div class="vd-empty-icon">${icon}</div><p>${msg}</p></div>`;
+}
+
+function itemRows(o) {
+  const list = Array.isArray(o.items)
+    ? o.items
+    : (Array.isArray(o.itemNames) ? o.itemNames.map(n => ({ name: n, qty: 1 })) : []);
+  return list.map(i =>
+    `<div class="vd-ord-item-row">
+       <span><span class="vd-ord-qty">×${i.qty || 1}</span>${i.name || i}</span>
+     </div>`
+  ).join('');
+}
+
+function tokDisp(o) {
+  return o.token || (o.tokenNumber ? '#' + o.tokenNumber : o.orderId || o._id);
+}
+
+/* ── PENDING card: Accept / Decline / Set prep time ── */
+function pendingCard(o) {
+  return `
+  <div class="vd-ord-card" id="vc-${o._id}">
+    <div class="vd-ord-head">
+      <div>
+        <div class="vd-ord-num">${tokDisp(o)}</div>
+        <div class="vd-ord-sub">${o.fc || ''} · ${o.studentName || 'Student'}</div>
+      </div>
+      <span class="vd-spill vd-sp-pending">Pending</span>
+    </div>
+    <div class="vd-ord-items">${itemRows(o)}</div>
+    <div class="vd-prep-row">
+      ${[3,5,8,10,15].map(t =>
+        `<div class="vd-pt-btn ${o.prepTime===t?'sel':''}"
+              onclick="setPT('${o._id}',${t},this)">${t}m</div>`
+      ).join('')}
+    </div>
+    <div class="vd-ord-foot">
+      <div class="vd-ord-total">₹${o.totalPrice || 0}</div>
+      <div class="vd-ord-actions">
+        <button class="vd-btn vd-btn-green vd-btn-sm"
+                onclick="acceptOrder('${o._id}')">✅ Accept</button>
+        <button class="vd-btn vd-btn-red vd-btn-sm"
+                onclick="declineOrder('${o._id}')">✕ Decline</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── PREPARING card: Mark Ready ── */
+function preparingCard(o) {
+  const prepLabel = o.prepTime ? ` · ${o.prepTime}m prep` : '';
+  return `
+  <div class="vd-ord-card" id="vc-${o._id}">
+    <div class="vd-ord-head">
+      <div>
+        <div class="vd-ord-num">${tokDisp(o)}</div>
+        <div class="vd-ord-sub">${o.orderId || o._id}${prepLabel}</div>
+      </div>
+      <span class="vd-spill vd-sp-preparing">Preparing</span>
+    </div>
+    <div class="vd-ord-items">${itemRows(o)}</div>
+    <div class="vd-ord-foot">
+      <div class="vd-ord-total">₹${o.totalPrice || 0}</div>
+      <div class="vd-ord-actions">
+        <button class="vd-btn vd-btn-blue vd-btn-sm"
+                onclick="markReady('${o._id}')">🔔 Mark Ready</button>
+        <button class="vd-btn vd-btn-ghost vd-btn-sm"
+                onclick="completeOrder('${o._id}')">📦 Complete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── READY card: Complete ── */
+function readyCard(o) {
+  return `
+  <div class="vd-ord-card" id="vc-${o._id}">
+    <div class="vd-ord-head">
+      <div>
+        <div class="vd-ord-num">${tokDisp(o)}</div>
+        <div class="vd-ord-sub">${o.fc || ''} · ${o.studentName || 'Student'}</div>
+      </div>
+      <span class="vd-spill vd-sp-ready">Ready ✅</span>
+    </div>
+    <div class="vd-ord-items">${itemRows(o)}</div>
+    <div class="vd-ord-foot">
+      <div class="vd-ord-total">₹${o.totalPrice || 0}</div>
+      <div class="vd-ord-actions">
+        <button class="vd-btn vd-btn-ghost vd-btn-sm"
+                onclick="completeOrder('${o._id}')">🏁 Complete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Set prep time inline (no modal needed, just highlights button) ── */
+function setPT(id, t, el) {
+  const o = allOrders.find(x => x._id === id);
+  if (o) o.prepTime = t;
+  el.closest('.vd-prep-row')
+    .querySelectorAll('.vd-pt-btn')
+    .forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  // Persist to Firestore (non-blocking)
+  updateDoc(doc(db, 'orders', id), { prepTime: t }).catch(() => {});
+}
+
+/* ── Accept order ── */
+async function acceptOrder(id) {
+  await setOrderStatus(id, 'preparing');
+  vToast('🍳 Accepted · Now preparing', 's');
+}
+
+/* ── Decline order ── */
+async function declineOrder(id) {
+  if (!confirm('Decline this order?')) return;
+  await setOrderStatus(id, 'declined');
+  // Remove from local array so UI clears immediately
+  allOrders = allOrders.filter(o => o._id !== id);
+  renderOrders(); renderStats(); renderEarnings();
+  vToast('❌ Order declined', 'e');
+}
+
+/* ── Mark ready ── */
+async function markReady(id) {
+  await setOrderStatus(id, 'ready');
+  const o = allOrders.find(x => x._id === id);
+  vToast('🔔 Token ' + (o ? tokDisp(o) : '') + ' is Ready!', 's');
+}
+
+/* ── Complete order ── */
+async function completeOrder(id) {
+  await setOrderStatus(id, 'completed');
+  vToast('✅ Order completed', 's');
+}
+
+/* ── Core status updater (optimistic + Firestore) ── */
+async function setOrderStatus(id, status) {
+  const o = allOrders.find(x => x._id === id);
+  if (o) o.status = status;
+  renderOrders(); renderStats(); renderEarnings();
+  try {
+    await updateDoc(doc(db, 'orders', id), { status });
+  } catch(e) { console.warn('Status update failed:', e.message); }
+}
+
+/* Expose order actions to window for inline onclick */
+Object.assign(window, {
+  setPT, acceptOrder, declineOrder, markReady, completeOrder,
+});
+
+/* ── Prep time modal helpers (kept for future use / progressive enhancement) ── */
+function selectPT(t, el) {
+  selectedPrepTime = t;
+  document.querySelectorAll('#prepTimeRow .vd-pt-btn')
+    .forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function confirmAccept() {
+  if (!pendingPrepId) return;
+  const o = allOrders.find(x => x._id === pendingPrepId);
+  if (o && selectedPrepTime) o.prepTime = selectedPrepTime;
+  vdCloseModal('prepModal');
+  acceptOrder(pendingPrepId);
+}
+window.selectPT      = selectPT;
+window.confirmAccept = confirmAccept;
+
+/* ═══════════════════════════════════════════════════
+   ██████  MENU  ██████
+   Menu items stored in Firestore 'menuItems' collection.
+   Falls back to local array if Firebase not configured.
+═══════════════════════════════════════════════════ */
+let nextLocalId = 200; // for demo/offline IDs
+
+/* ── Firestore menu listener ── */
+try {
+  onSnapshot(collection(db, 'menuItems'), snap => {
+    menuItems = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    renderMenu();
+  });
+} catch(e) {
+  // fallback to local demo data
+  menuItems = [
+    { _id:'m1', id:1, name:'Veg Thali',   price:70, category:'Main',   emoji:'🍛', available:true  },
+    { _id:'m2', id:2, name:'Egg Roll',    price:30, category:'Snacks', emoji:'🫔', available:true  },
+    { _id:'m3', id:3, name:'Masala Tea',  price:15, category:'Tea',    emoji:'☕', available:true  },
+    { _id:'m4', id:4, name:'Cold Coffee', price:40, category:'Drinks', emoji:'🥤', available:false },
+    { _id:'m5', id:5, name:'Samosa',      price:12, category:'Snacks', emoji:'🥟', available:true  },
+    { _id:'m6', id:6, name:'Paneer Wrap', price:50, category:'Main',   emoji:'🌯', available:true  },
+  ];
+  renderMenu();
+}
+
+function filterCat(cat, el) {
+  catFilter = cat;
+  document.querySelectorAll('.vd-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderMenu();
+}
+
+function renderMenu() {
+  const list  = document.getElementById('menuList');
+  if (!list) return;
+  const items = catFilter === 'All'
+    ? menuItems
+    : menuItems.filter(i => i.category === catFilter);
+
+  if (!items.length) {
+    list.innerHTML = `<div class="vd-empty"><div class="vd-empty-icon">🍽️</div><p>No items here</p></div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const img = item.emoji && item.emoji.startsWith('http')
+      ? `<img src="${item.emoji}" alt="">`
+      : (item.emoji || '🍽️');
+    return `
+    <div class="vd-mi-card ${!item.available ? 'vd-unavail' : ''}" id="mi-${item._id}">
+      <div class="vd-mi-img">${img}</div>
+      <div class="vd-mi-info">
+        <div class="vd-mi-name">${item.name}</div>
+        <div class="vd-mi-meta">
+          <span class="vd-dot ${item.available ? 'vd-dot-g' : 'vd-dot-r'}"></span>
+          ${item.category} · ${item.available ? 'Available' : 'Unavailable'}
+        </div>
+        <div class="vd-mi-price">₹${item.price}</div>
+      </div>
+      <div class="vd-mi-right">
+        <label class="vd-toggle vd-toggle-sm">
+          <input type="checkbox" ${item.available ? 'checked' : ''}
+                 onchange="toggleAvail('${item._id}',this)">
+          <span class="vd-track"></span>
+        </label>
+        <div class="vd-icon-btns">
+          <button class="vd-icon-btn vd-ib-edit" onclick="openEdit('${item._id}')">✏️</button>
+          <button class="vd-icon-btn vd-ib-del"  onclick="delItem('${item._id}')">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Toggle availability ── */
+async function toggleAvail(id, el) {
+  const it = menuItems.find(i => i._id === id);
+  if (!it) return;
+  it.available = el.checked;
+  renderMenu();
+  vToast(el.checked ? `✅ ${it.name} available` : `❌ ${it.name} unavailable`);
+  try {
+    await updateDoc(doc(db, 'menuItems', id), { available: it.available });
+  } catch(e) {}
+}
+
+/* ── Delete item ── */
+async function delItem(id) {
+  if (!confirm('Delete this item?')) return;
+  menuItems = menuItems.filter(i => i._id !== id);
+  renderMenu();
+  vToast('🗑️ Item removed');
+  try { await deleteDoc(doc(db, 'menuItems', id)); } catch(e) {}
+}
+
+/* ── Open add modal ── */
+function openAddModal() {
+  editingId = null;
+  document.getElementById('itemModalTitle').textContent = 'Add Menu Item';
+  ['iName','iPrice','iEmoji'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('iCat').value   = 'Main';
+  document.getElementById('iAvail').checked = true;
+  document.getElementById('itemModal').classList.add('open');
+}
+
+/* ── Open edit modal ── */
+function openEdit(id) {
+  editingId = id;
+  const it = menuItems.find(i => i._id === id);
+  if (!it) return;
+  document.getElementById('itemModalTitle').textContent = 'Edit Item';
+  document.getElementById('iName').value   = it.name;
+  document.getElementById('iPrice').value  = it.price;
+  document.getElementById('iCat').value    = it.category;
+  document.getElementById('iEmoji').value  = it.emoji || '';
+  document.getElementById('iAvail').checked = it.available;
+  document.getElementById('itemModal').classList.add('open');
+}
+
+/* ── Save item (add or edit) ── */
+async function saveItem() {
+  const name  = document.getElementById('iName').value.trim();
+  const price = parseFloat(document.getElementById('iPrice').value);
+  const cat   = document.getElementById('iCat').value;
+  const emoji = document.getElementById('iEmoji').value.trim() || '🍽️';
+  const avail = document.getElementById('iAvail').checked;
+
+  if (!name || isNaN(price) || price <= 0) {
+    vToast('⚠️ Name & valid price required', 'e'); return;
+  }
+
+  if (editingId) {
+    /* Update existing */
+    const it = menuItems.find(i => i._id === editingId);
+    if (it) Object.assign(it, { name, price, category: cat, emoji, available: avail });
+    vToast('✅ Item updated', 's');
+    try {
+      await updateDoc(doc(db, 'menuItems', editingId),
+        { name, price, category: cat, emoji, available: avail });
+    } catch(e) {}
+  } else {
+    /* Add new */
+    const newItem = { name, price, category: cat, emoji, available: avail };
+    try {
+      const ref = await addDoc(collection(db, 'menuItems'), newItem);
+      menuItems.push({ _id: ref.id, ...newItem });
+    } catch(e) {
+      // offline fallback
+      const localId = 'local_' + (nextLocalId++);
+      menuItems.push({ _id: localId, ...newItem });
+    }
+    vToast('✅ Item added', 's');
+  }
+
+  vdCloseModal('itemModal');
+  renderMenu();
+}
+
+/* Expose menu actions */
+Object.assign(window, {
+  filterCat, openAddModal, openEdit, saveItem, toggleAvail, delItem,
+});
+
+/* ═══════════════════════════════════════════════════
+   ██████  PROFILE  ██████
+═══════════════════════════════════════════════════ */
+const profMap = {
+  shopName: { label: 'Shop Name',    ids: ['pShopName','profDisplayName'] },
+  phone:    { label: 'Phone Number', ids: ['pPhone'] },
+  upi:      { label: 'UPI ID',       ids: ['pUpi'] },
+};
+
+function renderProfile() {
+  /* Populate from vendorAuth if available */
+  if (vendorAuth.name) {
+    document.getElementById('profDisplayName').textContent =
+      vendorAuth.name || 'KIIT Canteen';
+    document.getElementById('pShopName').textContent =
+      vendorAuth.name || 'KIIT Canteen';
+  }
+}
+
+function editProfField(f) {
+  editingProf = f;
+  const m = profMap[f];
+  document.getElementById('profModalTitle').textContent = `Edit ${m.label}`;
+  document.getElementById('profEditLbl').textContent    = m.label;
+  document.getElementById('profEditInput').value =
+    document.getElementById(m.ids[0]).textContent;
+  document.getElementById('profModal').classList.add('open');
+}
+
+function saveProfField() {
+  const v = document.getElementById('profEditInput').value.trim();
+  if (!v) { vToast('⚠️ Value cannot be empty', 'e'); return; }
+  profMap[editingProf].ids.forEach(id => {
+    document.getElementById(id).textContent = v;
+  });
+  /* Persist UPI to Firestore vendor doc (best effort) */
+  if (editingProf === 'upi') {
+    try {
+      updateDoc(doc(db, 'vendors', vendorAuth.phone || 'default'), { upi: v })
+        .catch(() => {});
+    } catch(e) {}
+  }
+  vdCloseModal('profModal');
+  vToast('✅ Profile updated', 's');
+}
+
+/* Expose profile actions */
+Object.assign(window, { editProfField, saveProfField });
+
+/* ═══════════════════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════════════════ */
+function vdCloseModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function vdOutsideClose(e, id) {
+  if (e.target === document.getElementById(id)) vdCloseModal(id);
+}
+window.vdCloseModal    = vdCloseModal;
+window.vdOutsideClose  = vdOutsideClose;
+
+/* ═══════════════════════════════════════════════════
+   LOGOUT
+═══════════════════════════════════════════════════ */
+function vendorLogout() {
+  if (!confirm('Logout from vendor dashboard?')) return;
+  localStorage.clear();
+  window.location.href = 'index.html';
+}
+window.vendorLogout = vendorLogout;
+
+/* ═══════════════════════════════════════════════════
+   BOOT  – Orders tab active by default
+═══════════════════════════════════════════════════ */
+(function boot() {
+  document.getElementById('navOrders').classList.add('active');
+  renderProfile();
+})();
+
+</script>
+</body>
+</html>

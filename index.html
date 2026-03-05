@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KiitKaadda – Campus Food Ordering</title>
+<meta name="description" content="Order food from KIIT campus food courts and skip the queue.">
+<meta name="theme-color" content="#ff5c35">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KiitKaadda">
+<meta property="og:title" content="KiitKaadda – Campus Food Ordering">
+<meta property="og:description" content="Skip the queue. Order from KIIT food courts right from your phone.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Toast container -->
+<div class="tcon" id="tc"></div>
+
+<!--
+  Invisible reCAPTCHA mount-point for Firebase Phone Auth.
+  Must be in <body> BEFORE script.js runs. RecaptchaVerifier
+  targets this element by ID.
+-->
+<div id="recaptcha-container"></div>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-ov">
+  <div class="lcard">
+    <div class="llogo">
+      <span class="li">&#x1F35B;</span>
+      <div class="ln">KiitKaadda</div>
+      <div class="lt">Order from KIIT Food Courts &middot; Skip the Queue</div>
+    </div>
+
+    <!-- Role tabs -->
+    <div class="rtabs">
+      <div class="rtab active" id="rt-student" onclick="selRole('student')">&#x1F393; Student</div>
+      <div class="rtab" id="rt-vendor" onclick="selRole('vendor')">&#x1F9D1;&#x200D;&#x1F373; Vendor</div>
+    </div>
+
+    <!-- Step: Method -->
+    <div id="s-method">
+      <div class="lmethods">
+        <button class="mbtn" onclick="showGoogle()">
+          <span class="mi">&#x1F535;</span>
+          <span class="ml">Continue with Google</span>
+          <span class="ma">&rsaquo;</span>
+        </button>
+        <div class="divrow">
+          <div class="divline"></div>
+          <div class="divtxt">or</div>
+          <div class="divline"></div>
+        </div>
+        <button class="mbtn" onclick="showPhone()">
+          <span class="mi">&#x1F4F1;</span>
+          <span class="ml">Continue with Phone Number</span>
+          <span class="ma">&rsaquo;</span>
+        </button>
+      </div>
+      <!-- Referral code field - hidden for vendors via selRole() -->
+      <div id="ref-row" style="margin-top:12px;">
+        <div class="ig">
+          <div class="ilbl">Referral Code <span style="color:var(--muted);font-weight:400;text-transform:none;">(optional)</span></div>
+          <input class="ainp" id="ref-inp" type="text"
+            placeholder="Enter friend's code for 20 bonus coins"
+            maxlength="8" style="text-transform:uppercase;"
+            oninput="this.value=this.value.toUpperCase()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Step: Phone number + OTP -->
+    <div id="s-phone" class="pstep">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
+        <span class="bk" onclick="backMethod()">&larr; Back</span>
+        <span style="font-size:13px;color:var(--text2);font-weight:600;">Phone Login</span>
+      </div>
+
+      <!-- Sub-step: enter phone -->
+      <div id="pe">
+        <div class="ig" style="margin-bottom:10px;">
+          <div class="ilbl">Phone Number</div>
+          <div class="prow">
+            <div class="ccode">&#x1F1EE;&#x1F1F3; +91</div>
+            <input class="ainp" id="ph" type="tel" maxlength="10"
+              placeholder="10-digit number"
+              oninput="this.value=this.value.replace(/\D/g,'')">
+          </div>
+        </div>
+        <button class="lcta" onclick="sendOtp()">Send OTP &rarr;</button>
+      </div>
+
+      <!-- Sub-step: enter OTP -->
+      <div id="oe" style="display:none;animation:fU .3s ease">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">
+          OTP sent to
+          <span id="opd" style="color:var(--text);font-weight:600;"></span>
+          <span style="color:var(--accent);cursor:pointer;font-size:12px;" onclick="backPe()">Change</span>
+        </div>
+        <div class="ig" style="margin-bottom:10px;">
+          <div class="ilbl">Enter OTP</div>
+          <div class="orow">
+            <input class="odig" id="o0" maxlength="1" type="text" inputmode="numeric" oninput="oi(this,0)" onkeydown="ok(this,0)">
+            <input class="odig" id="o1" maxlength="1" type="text" inputmode="numeric" oninput="oi(this,1)" onkeydown="ok(this,1)">
+            <input class="odig" id="o2" maxlength="1" type="text" inputmode="numeric" oninput="oi(this,2)" onkeydown="ok(this,2)">
+            <input class="odig" id="o3" maxlength="1" type="text" inputmode="numeric" oninput="oi(this,3)" onkeydown="ok(this,3)">
+            <input class="odig" id="o4" maxlength="1" type="text" inputmode="numeric" oninput="oi(this,4)" onkeydown="ok(this,4)">
+            <input class="odig" id="o5" maxlength="1" type="text" inputmode="numeric" oninput="oi(this,5)" onkeydown="ok(this,5)">
+          </div>
+        </div>
+        <button class="lcta" onclick="verOtp()">Verify OTP &rarr;</button>
+      </div>
+    </div>
+
+    <!-- Step: Google (KIIT email only) -->
+    <div id="s-google" class="gstep">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span class="bk" onclick="backMethod()">&larr; Back</span>
+        <span style="font-size:13px;color:var(--text2);font-weight:600;">Choose Account</span>
+      </div>
+      <div id="gaccs"></div>
+      <button class="lcta" id="gcta" onclick="doGoogle()" disabled>Continue with Google &rarr;</button>
+    </div>
+
+    <!-- Step: Vendor Secret Code (shown after OTP verified for vendor role) -->
+    <div id="s-vendor-code" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span class="bk" onclick="backMethod()">&larr; Back</span>
+        <span style="font-size:13px;color:var(--text2);font-weight:600;">Vendor Verification</span>
+      </div>
+      <div class="nsico">&#x1F510;</div>
+      <div class="nstit" style="text-align:center;margin-bottom:6px;">Vendor Access Code</div>
+      <div class="nssub" style="text-align:center;margin-bottom:16px;">
+        Enter the secret code provided<br>by the KiitKaadda admin.
+      </div>
+      <div class="ig" style="width:100%;margin-bottom:8px;">
+        <div class="ilbl">Secret Code</div>
+        <input class="ainp" id="vc-inp" type="password"
+          placeholder="Enter vendor secret code"
+          maxlength="32"
+          oninput="document.getElementById('vc-cta').disabled=this.value.trim().length<3"
+          onkeydown="if(event.key==='Enter')verVendorCode()">
+      </div>
+      <div id="vc-err" style="font-size:12px;color:var(--accent);margin-bottom:8px;display:none;">
+        &#x274C; Incorrect code. Please try again.
+      </div>
+      <button class="lcta" id="vc-cta" onclick="verVendorCode()" disabled style="width:100%;">
+        Access Dashboard &#x1F9D1;&#x200D;&#x1F373;
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px;text-align:center;">
+        Contact admin if you don't have the code.
+      </div>
+    </div>
+
+    <!-- Step: Name entry -->
+    <div id="s-name" class="nstep">
+      <div class="nsico">&#x1F44B;</div>
+      <div class="nstit">What's your name?</div>
+      <div class="nssub">We'll personalise your experience.<br>You can update this anytime.</div>
+      <div class="ig" style="width:100%;">
+        <div class="ilbl">Your Name</div>
+        <input class="ainp" id="ni" type="text"
+          placeholder="e.g. Naveen, Priya&#x2026;"
+          maxlength="32" autocomplete="given-name"
+          oninput="document.getElementById('ncta').disabled=this.value.trim().length<2"
+          onkeydown="if(event.key==='Enter')finLogin()">
+      </div>
+      <button class="lcta" id="ncta" onclick="finLogin()" disabled style="width:100%;">
+        Let's Go &#x1F680;
+      </button>
+    </div>
+
+    <div class="lfoot">By continuing you agree to our Terms &middot; <span style="color:var(--accent)">KiitKaadda</span> &middot; KIIT University</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="shell" id="app" style="display:none;">
+  <div class="sbar">
+    <span id="clk">9:41</span>
+    <span style="color:var(--accent);font-family:var(--fh);font-weight:800;font-size:13px;">KiitKaadda</span>
+    <span>&#x1F4F6; &#x1F50B;</span>
+  </div>
+
+  <div class="shell-body">
+
+  <!-- HOME -->
+  <div class="screen active" id="sc-home">
+    <div class="scroll">
+      <div class="hdr">
+        <div class="hbrand">
+          <div class="hlogo">&#x1F35B; KiitKaadda</div>
+          <button class="sbtn" onclick="shareApp()">&#x1F4E4; Share</button>
+        </div>
+        <div class="greet">Hey, <span class="hl" id="gname">KIITian</span> &#x1F44B;<br>
+          <span style="font-size:18px;color:var(--text);">What are you eating?</span>
+        </div>
+        <div class="subl">Order from KIIT Food Courts &middot; Skip the Queue</div>
+      </div>
+      <div class="srch">
+        <span>&#x1F50D;</span>
+        <input type="text" placeholder="Search dishes, stalls&#x2026;" id="srchi" oninput="doSearch(this.value)">
+      </div>
+
+      <!-- PWA install banner -->
+      <div id="iban" class="iban" onclick="trigInst()" style="display:none;">
+        <div class="iico">&#x1F4F2;</div>
+        <div class="itxt">
+          <div class="iti">Install KiitKaadda</div>
+          <div class="isu">Add to home screen</div>
+        </div>
+        <div class="idis" onclick="event.stopPropagation();disInst()">&#x2715;</div>
+      </div>
+
+      <div style="font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:20px 24px 10px;">Food Courts</div>
+      <div class="fcg">
+        <div class="fcc a1" onclick="openMenu('FC1')">
+          <div class="fce">&#x1F35B;</div><div class="fcn">FC1</div>
+          <div class="fcm">South Indian &amp; Snacks</div>
+          <div class="fcst open">Open</div>
+          <div class="fc-qr" onclick="event.stopPropagation();copyQR('FC1')" title="Copy QR link">&#x1F517;</div>
+        </div>
+        <div class="fcc a2" onclick="openMenu('FC2')">
+          <div class="fce">&#x1F35C;</div><div class="fcn">FC2</div>
+          <div class="fcm">Chinese &amp; Fast Food</div>
+          <div class="fcst busy">Busy</div>
+          <div class="fc-qr" onclick="event.stopPropagation();copyQR('FC2')" title="Copy QR link">&#x1F517;</div>
+        </div>
+        <div class="fcc a3" onclick="openMenu('FC3')">
+          <div class="fce">&#x1F96A;</div><div class="fcn">FC3</div>
+          <div class="fcm">Rolls &amp; Sandwiches</div>
+          <div class="fcst open">Open</div>
+          <div class="fc-qr" onclick="event.stopPropagation();copyQR('FC3')" title="Copy QR link">&#x1F517;</div>
+        </div>
+        <div class="fcc a4" onclick="openMenu('FC4')">
+          <div class="fce">&#x2615;</div><div class="fcn">FC4</div>
+          <div class="fcm">Beverages &amp; Desserts</div>
+          <div class="fcst open">Open</div>
+          <div class="fc-qr" onclick="event.stopPropagation();copyQR('FC4')" title="Copy QR link">&#x1F517;</div>
+        </div>
+      </div>
+
+      <!-- Coins banner -->
+      <div class="cban" onclick="showReferral()">
+        <div class="cleft">
+          <div class="ctit">&#x1FA99; Reward Coins</div>
+          <div class="csub">Earn 5 coins per &#x20B9;100 spent &middot; Share code for +20 bonus!</div>
+        </div>
+        <div class="cbadge">
+          <div class="cnum" id="cdis">0</div>
+          <div class="clbl">coins</div>
+        </div>
+      </div>
+
+      <!-- Referral card -->
+      <div class="ref-card" id="ref-card" style="display:none;">
+        <div class="ref-title">&#x1F381; Your Referral Code</div>
+        <div class="ref-code" id="ref-code-disp">&#x2013;&#x2013;&#x2013;&#x2013;</div>
+        <div class="ref-sub">Share this code &middot; Both of you get 20 coins when they sign up!</div>
+        <button class="ref-copy-btn" onclick="copyReferralCode()">&#x1F4CB; Copy Code</button>
+      </div>
+
+      <div style="height:20px;"></div>
+    </div>
+  </div>
+
+  <!-- MENU -->
+  <div class="screen" id="sc-menu" style="position:relative;">
+    <div class="mhero">
+      <div class="back" onclick="goTo('sc-home')">&larr; Back</div>
+      <div class="mhn" id="mt"></div>
+      <div class="mhm" id="mm"></div>
+    </div>
+    <div class="qbar">
+      <div class="qg"><div class="ql">Orders ahead</div><div class="qv" id="qo">&ndash;</div></div>
+      <div class="qd"></div>
+      <div class="qg"><div class="ql">Est. wait</div><div class="qv" id="qw">&ndash; min</div></div>
+      <div class="qd"></div>
+      <div class="qg"><div class="ql">Queue status</div><div class="qv" id="qs">&ndash;</div></div>
+    </div>
+    <div class="ctabs" id="ctabs"></div>
+    <div class="menu-scroll">
+      <div class="mlist" id="mlist"></div>
+    </div>
+    <div class="cfab empty" id="cfab">
+      <div class="fbc" id="fbc">Cart is empty</div>
+      <div class="fbl" id="fbl"></div>
+      <div class="fbt" id="fbt"></div>
+    </div>
+  </div>
+
+  <!-- CART -->
+  <div class="screen" id="sc-cart">
+    <div class="chdr">
+      <div class="back" onclick="goTo('sc-menu')" style="margin:0;">&larr;</div>
+      <div class="cart-title">Your Cart</div>
+      <div class="cftag" id="cftag">FC1</div>
+    </div>
+    <div id="cbody" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="scroll" style="padding-bottom:20px;">
+        <div class="citems" id="citems"></div>
+        <div class="osum">
+          <div class="srow"><span>Subtotal</span><span id="ssub">&#x20B9;0</span></div>
+          <div class="srow"><span>Platform fee</span><span>&#x20B9;2</span></div>
+          <div class="srow tot"><span>Total</span><span id="stot">&#x20B9;2</span></div>
+        </div>
+        <div class="cpn">
+          <span style="font-size:18px;">&#x1F39F;&#xFE0F;</span>
+          <span style="flex:1;font-size:13px;color:var(--muted);">Apply coupon or redeem coins</span>
+          <span style="color:var(--muted);font-size:14px;">&rsaquo;</span>
+        </div>
+        <div style="padding:0 0 4px;">
+          <button class="upi-btn" id="upi-btn" onclick="doUPI()">
+            <span style="font-size:18px;">&#x1F4B3;</span>
+            <span>Pay via UPI</span>
+            <span class="upi-amt" id="upi-amt">&#x20B9;0</span>
+          </button>
+          <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;">Opens your UPI app automatically</div>
+        </div>
+      </div>
+      <button class="cta" id="chkbtn" onclick="placeOrder()">&#x2713; Place Order (Cash / Already Paid)</button>
+    </div>
+    <div id="cempty" class="ecart" style="display:none;">
+      <div class="ei">&#x1F6D2;</div>
+      <p>Your cart is empty.<br>Add something delicious!</p>
+      <button class="bsec" style="width:auto;padding:10px 24px;margin-top:8px;" onclick="goTo('sc-home')">Browse Food Courts</button>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="screen" id="sc-orders">
+    <div class="ohdr"><div class="otit">Your Orders</div></div>
+    <div class="scroll"><div class="olist" id="olist"></div></div>
+  </div>
+
+  <!-- CONFIRM -->
+  <div class="screen" id="sc-confirm">
+    <div class="conwrap">
+      <div class="conanim">&#x2713;</div>
+      <div class="contit">Order Placed!</div>
+      <div class="consub">Your food is being prepared.<br>Show your token at the counter.</div>
+      <div class="tcard">
+        <div class="tlbl">Order Token</div>
+        <div class="tnum" id="tnum">#101</div>
+        <div class="tfc" id="tfc">FC1</div>
+        <div class="twait" id="twait">&#x23F1; Est. ready in 12 min</div>
+      </div>
+      <div class="cea">&#x1FA99; You earned <strong id="cen">&nbsp;10&nbsp;</strong> coins on this order!</div>
+      <div class="cacts">
+        <button class="cta" style="margin:0;width:100%;" onclick="goTo('sc-home')">Back to Home</button>
+        <button class="bsec" onclick="switchNav('orders')">View Order History</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="sc-profile">
+    <div class="psec"><div class="ptit">Profile</div></div>
+    <div class="scroll">
+      <div class="pcard">
+        <div class="parow">
+          <div class="pav" id="pav">?</div>
+          <div>
+            <div class="pdn" id="pdn">&ndash;</div>
+            <div class="prt student" id="prt">Student</div>
+          </div>
+        </div>
+        <div class="profile-row"><div class="prl">Reward Coins</div><div class="prv" id="pcoins">0 &#x1FA99;</div></div>
+        <div class="profile-row"><div class="prl">Total Orders</div><div class="prv" id="pords">0</div></div>
+        <div class="profile-row"><div class="prl">Referral Code</div><div class="prv ref-prv" id="p-refcode" onclick="copyReferralCode()">&ndash;&ndash;</div></div>
+        <div class="profile-row"><div class="prl">Login Method</div><div class="prv" id="plm">&ndash;</div></div>
+      </div>
+      <div class="pcard" style="margin-top:12px;">
+        <div class="profile-row" onclick="shareApp()"><div>&#x1F4E4; Share KiitKaadda</div><div style="color:var(--muted);">&rsaquo;</div></div>
+        <div class="profile-row" onclick="window.open('token-display.html','_blank')"><div>&#x1F4FA; Token Display Screen</div><div style="color:var(--muted);">&rsaquo;</div></div>
+      </div>
+      <button class="logbtn" onclick="logout()">&#x1F6AA; Logout</button>
+      <div style="height:20px;"></div>
+    </div>
+  </div>
+
+  </div><!-- end shell-body -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="ni active" id="nv-home"    onclick="switchNav('home')">   <div class="ni-icon">&#x1F3E0;</div><div class="ni-lbl">Home</div></div>
+    <div class="ni"        id="nv-cart"    onclick="switchNav('cart')">   <div class="ni-icon">&#x1F6D2;</div><div class="nbadge" id="nbadge">0</div><div class="ni-lbl">Cart</div></div>
+    <div class="ni"        id="nv-orders"  onclick="switchNav('orders')"> <div class="ni-icon">&#x1F4CB;</div><div class="ni-lbl">Orders</div></div>
+    <div class="ni"        id="nv-profile" onclick="switchNav('profile')"><div class="ni-icon">&#x1F464;</div><div class="ni-lbl">Profile</div></div>
+  </div>
+</div>
+
+<!-- Plain script tag - all functions are global, inline onclick handlers work -->
+<script src="script.js"></script>
+
+</body>
+</html>
