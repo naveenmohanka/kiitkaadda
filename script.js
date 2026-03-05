@@ -106,22 +106,19 @@ async function initFirebaseAuth() {
 }
 
 /* ── Ensure reCAPTCHA is ready ──
-   IMPORTANT:
-   • size:"invisible" means NO visible checkbox — it runs silently in background.
-   • We do NOT pre-render on page load — only create it when user actually
-     taps "Send OTP", to avoid the widget appearing before it's needed.
-   • On any failure we destroy and recreate it so the next attempt works.
+   CRITICAL: We must call .render() and await it BEFORE signInWithPhoneNumber.
+   Without render(), Firebase falls back to a visible checkbox captcha.
+   The container is fixed/z-index:9999 in HTML so it's never clipped.
 ── */
 async function ensureRecaptcha() {
   await initFirebaseAuth();
   if (!recaptchaVerifier) {
     recaptchaVerifier = new _RecaptchaVerifier(fbAuth, 'recaptcha-container', {
       size: 'invisible',
-      callback: () => {},          // OTP sent successfully
-      'expired-callback': () => {  // token expired — reset so next try works
-        resetRecaptcha();
-      }
+      callback: () => {},
+      'expired-callback': () => { resetRecaptcha(); }
     });
+    await recaptchaVerifier.render(); // must await this — makes it truly invisible
   }
 }
 
