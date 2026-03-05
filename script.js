@@ -420,26 +420,30 @@ import {
 
 async function doGoogle(){
 
-  const provider = new GoogleAuthProvider();
+const provider = new firebase.auth.GoogleAuthProvider();
 
-  try{
+try{
 
-    const result = await signInWithPopup(fbAuth, provider);
-    const user = result.user;
+const result = await firebase.auth().signInWithPopup(provider);
 
-    if(!user.email.endsWith("@kiit.ac.in")){
-      alert("Only KIIT students allowed");
-      return;
-    }
+const user = result.user;
 
-    document.getElementById("login-ov").style.display="none";
-    document.getElementById("app").style.display="block";
+if(!user.email.endsWith("@kiit.ac.in")){
+    alert("Only KIIT students allowed");
+    firebase.auth().signOut();
+    return;
+}
 
-  }catch(err){
-    console.error(err);
-    alert("Google login failed");
-  }
+console.log("Logged in:", user.email);
 
+showMainApp();
+
+}catch(e){
+
+console.error(e);
+alert("Google login failed");
+
+}
 }
 
 /* ── showName: transition to name entry step ── */
@@ -946,3 +950,15 @@ Object.assign(window, {
     ensureRecaptcha().catch(() => {});
   }
 })();
+function loginWithKiitEmail(){
+
+const email = document.getElementById("kiit-email").value.trim();
+
+if(!email.endsWith("@kiit.ac.in")){
+    alert("Only KIIT students allowed");
+    return;
+}
+
+doGoogle(email);
+
+}

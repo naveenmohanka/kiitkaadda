@@ -51,7 +51,19 @@
       <div class="lmethods">
         <button class="mbtn" onclionclick="doGoogle()">
           <span class="mi">&#x1F535;</span>
-          <span class="ml">Continue with Google</span>
+          <span class="ml"> <div id="kiit-login" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;">
+
+<input 
+id="kiit-email"
+type="email"
+placeholder="Enter your KIIT email (example@kiit.ac.in)"
+style="padding:12px; border-radius:10px; border:none; outline:none; font-size:14px;">
+
+<button onclick="loginWithKiitEmail()" class="primary-btn">
+Continue
+</button>
+
+</div></span>
           <span class="ma">&rsaquo;</span>
         </button>
         <div class="divrow">
