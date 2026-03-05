@@ -261,35 +261,123 @@ function switchNav(tab) {
                         → showPhone()  → sendOtp() → verOtp()
        → showName() → finLogin() → launchApp()
 
-   Vendor path:
-     selRole('vendor') → showPhone() → sendOtp() → verOtp()
-       → showVendorSecret() → verVendorSecret()
-       → showName() → finLogin() → vendor.html
+   Vendor LOGIN path:
+     selRole('vendor') → selVendorMode('login') → showPhone() → sendOtp() → verOtp()
+       → showVendorSecret() (secret code) → showName() → finLogin() → vendor.html
+
+   Vendor REGISTER path:
+     selRole('vendor') → selVendorMode('register') → showVendorRegister()
+       → submitVendorRegister() (validates FC+name+phone+UPI+secret, sends OTP)
+       → verOtp() → showName() → finLogin() (saves fc+upi) → vendor.html
 
 ══════════════════════════════════════════════════════════════ */
+
+/* Tracks whether vendor chose 'login' or 'register' */
+let vendorMode = 'login'; // 'login' | 'register'
+
+/* Temporary store for vendor registration data */
+let vendorRegData = {};
 
 function selRole(r) {
   lRole = r;
   document.getElementById('rt-student').classList.toggle('active', r==='student');
   document.getElementById('rt-vendor').classList.toggle('active',  r==='vendor');
 
-  /* For vendors: hide Google/email button AND the "or" divider — phone only */
   const isVendor = r === 'vendor';
-  const gBtn  = document.getElementById('google-btn');
-  const gDiv  = document.getElementById('google-divider');
-  if (gBtn) gBtn.style.display  = isVendor ? 'none' : '';
-  if (gDiv) gDiv.style.display  = isVendor ? 'none' : '';
+  document.getElementById('student-methods').style.display = isVendor ? 'none' : '';
+  document.getElementById('vendor-methods').style.display  = isVendor ? '' : 'none';
 
-  /* Hide referral field for vendors */
-  const rr = document.getElementById('ref-row');
-  if (rr) rr.style.display = isVendor ? 'none' : '';
+  /* Reset vendor sub-tab to Login every time vendor is selected */
+  if (isVendor) selVendorMode('login');
 
   backMethod();
 }
 
+function selVendorMode(mode) {
+  vendorMode = mode;
+  document.getElementById('vt-login').classList.toggle('active',    mode==='login');
+  document.getElementById('vt-register').classList.toggle('active', mode==='register');
+  document.getElementById('vendor-login-opt').style.display    = mode==='login'    ? '' : 'none';
+  document.getElementById('vendor-register-opt').style.display = mode==='register' ? '' : 'none';
+}
+
+function showVendorRegister() {
+  document.getElementById('s-method').style.display = 'none';
+  const el = document.getElementById('s-vendor-register');
+  el.style.display = 'flex'; el.classList.add('on');
+  setTimeout(() => document.getElementById('vreg-fc').focus(), 100);
+}
+
+/* ── submitVendorRegister: validate form then send OTP to the entered number ── */
+async function submitVendorRegister() {
+  const fc     = document.getElementById('vreg-fc').value.trim();
+  const name   = document.getElementById('vreg-name').value.trim();
+  const ph     = document.getElementById('vreg-ph').value.trim().replace(/\D/g,'');
+  const upi    = document.getElementById('vreg-upi').value.trim();
+  const secret = document.getElementById('vreg-secret').value.trim();
+  const errEl  = document.getElementById('vreg-err');
+
+  /* Validate */
+  let err = '';
+  if (!fc)               err = '⚠️ Please select your Food Court';
+  else if (name.length < 2) err = '⚠️ Please enter your name';
+  else if (ph.length !== 10) err = '⚠️ Enter a valid 10-digit phone number';
+  else if (!upi.includes('@')) err = '⚠️ Enter a valid UPI ID (e.g. name@upi)';
+  else if (secret !== VENDOR_SECRET) err = '❌ Incorrect admin secret code';
+
+  if (err) {
+    errEl.textContent = err; errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  /* Store registration data — will be committed in finLogin() */
+  vendorRegData = { fc, name, upi, phone: ph };
+
+  /* Use the shared phone OTP flow — pre-fill the phone field */
+  document.getElementById('ph').value = ph;
+
+  /* Show phone step in OTP-sending state directly */
+  document.getElementById('s-vendor-register').style.display = 'none';
+  document.getElementById('s-vendor-register').classList.remove('on');
+  const phoneEl = document.getElementById('s-phone');
+  phoneEl.style.display = 'flex'; phoneEl.classList.add('on');
+  document.getElementById('pe').style.display = 'none';
+  document.getElementById('oe').style.display = 'none';
+
+  /* Send OTP */
+  const btn = document.createElement('div'); // dummy — sendOtp uses 'send-otp-btn' id
+  const realBtn = document.getElementById('send-otp-btn');
+  if (realBtn) { realBtn.disabled = true; realBtn.textContent = 'Sending…'; }
+
+  try {
+    await ensureRecaptcha();
+    const phone = '+91' + ph;
+    confirmationResult = await _signInWithPhoneNumber(fbAuth, phone, recaptchaVerifier);
+    document.getElementById('opd').textContent = phone;
+    document.getElementById('oe').style.display = 'block';
+    document.getElementById('o0').focus();
+    toast('📱 OTP sent to +91' + ph, 's');
+  } catch(err2) {
+    console.error('register sendOtp:', err2);
+    resetRecaptcha();
+    const code = err2.code || '';
+    let msg = '❌ Failed to send OTP. Please retry.';
+    if (code === 'auth/too-many-requests') msg = '⏳ Too many attempts. Wait a minute.';
+    if (code === 'auth/invalid-phone-number') msg = '❌ Invalid phone number.';
+    toast(msg, 'e');
+    /* Go back to register form */
+    document.getElementById('s-phone').style.display = 'none';
+    document.getElementById('s-vendor-register').style.display = 'flex';
+    document.getElementById('s-vendor-register').classList.add('on');
+  } finally {
+    if (realBtn) { realBtn.disabled = false; realBtn.textContent = 'Send OTP →'; }
+  }
+}
+
 function backMethod() {
   document.getElementById('s-method').style.display = '';
-  ['s-phone','s-google','s-name','s-vendor-code'].forEach(id => {
+  ['s-phone','s-google','s-name','s-vendor-code','s-vendor-register'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.style.display = 'none'; el.classList.remove('on'); }
   });
@@ -391,8 +479,15 @@ async function verOtp() {
     toast('✅ Phone verified!', 's');
 
     if (lRole === 'vendor') {
-      /* Vendors must pass the secret code check next */
-      showVendorSecret();
+      if (vendorMode === 'register') {
+        /* Registration: secret already validated in form — go straight to name */
+        toast('✅ Phone verified!', 's');
+        showName();
+      } else {
+        /* Login: still need secret code check */
+        toast('✅ Phone verified!', 's');
+        showVendorSecret();
+      }
     } else {
       /* Students go to name entry (or launch app if returning user) */
       if (usr.in && usr.name) {
@@ -520,6 +615,15 @@ function finLogin() {
   usr.name = name;
   usr.role = lRole;
   usr.in   = true;
+
+  /* Save vendor registration data if this is a new registration */
+  if (lRole === 'vendor' && vendorMode === 'register' && vendorRegData.fc) {
+    usr.fc   = vendorRegData.fc;
+    usr.upi  = vendorRegData.upi;
+    usr.name = vendorRegData.name || name; // prefer name from registration form
+    document.getElementById('ni').value = usr.name;
+    vendorRegData = {}; // clear
+  }
 
   /* Assign referral code if new student */
   if (lRole === 'student' && !usr.refCode) {
@@ -933,8 +1037,11 @@ if ('serviceWorker' in navigator)
 Object.assign(window, {
   /* login */
   selRole,
+  selVendorMode,
   backMethod,
   showPhone,
+  showVendorRegister,
+  submitVendorRegister,
   sendOtp,
   backPe,
   oi,

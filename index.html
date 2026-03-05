@@ -38,32 +38,69 @@
     </div>
 
     <div id="s-method">
-      <div class="lmethods">
-        <button class="mbtn" id="google-btn" onclick="showGoogle()">
-          <span class="mi">&#x1F535;</span>
-          <span class="ml">Continue with Google</span>
-          <span class="ma">&rsaquo;</span>
-        </button>
-        <div class="divrow" id="google-divider">
-          <div class="divline"></div>
-          <div class="divtxt">or</div>
-          <div class="divline"></div>
+
+      <!-- ── Student login options (hidden when vendor selected) ── -->
+      <div id="student-methods">
+        <div class="lmethods">
+          <button class="mbtn" id="google-btn" onclick="showGoogle()">
+            <span class="mi">&#x1F535;</span>
+            <span class="ml">Continue with Google</span>
+            <span class="ma">&rsaquo;</span>
+          </button>
+          <div class="divrow" id="google-divider">
+            <div class="divline"></div>
+            <div class="divtxt">or</div>
+            <div class="divline"></div>
+          </div>
+          <button class="mbtn" onclick="showPhone()">
+            <span class="mi">&#x1F4F1;</span>
+            <span class="ml">Continue with Phone Number</span>
+            <span class="ma">&rsaquo;</span>
+          </button>
         </div>
-        <button class="mbtn" onclick="showPhone()">
-          <span class="mi">&#x1F4F1;</span>
-          <span class="ml">Continue with Phone Number</span>
-          <span class="ma">&rsaquo;</span>
-        </button>
-      </div>
-      <div id="ref-row" style="margin-top:12px;">
-        <div class="ig">
-          <div class="ilbl">Referral Code <span style="color:var(--muted);font-weight:400;text-transform:none;">(optional)</span></div>
-          <input class="ainp" id="ref-inp" type="text"
-            placeholder="Enter friend's code for 20 bonus coins"
-            maxlength="8" style="text-transform:uppercase;"
-            oninput="this.value=this.value.toUpperCase()">
+        <div id="ref-row" style="margin-top:12px;">
+          <div class="ig">
+            <div class="ilbl">Referral Code <span style="color:var(--muted);font-weight:400;text-transform:none;">(optional)</span></div>
+            <input class="ainp" id="ref-inp" type="text"
+              placeholder="Enter friend's code for 20 bonus coins"
+              maxlength="8" style="text-transform:uppercase;"
+              oninput="this.value=this.value.toUpperCase()">
+          </div>
         </div>
       </div>
+
+      <!-- ── Vendor Register / Login sub-tabs (hidden when student selected) ── -->
+      <div id="vendor-methods" style="display:none;">
+        <div class="rtabs" style="margin-bottom:16px;">
+          <div class="rtab active" id="vt-login"    onclick="selVendorMode('login')"   >&#x1F511; Login</div>
+          <div class="rtab"        id="vt-register" onclick="selVendorMode('register')">&#x1F4DD; Register</div>
+        </div>
+
+        <!-- Vendor Login option -->
+        <div id="vendor-login-opt">
+          <button class="mbtn" onclick="showPhone()">
+            <span class="mi">&#x1F4F1;</span>
+            <span class="ml">Login with Phone Number</span>
+            <span class="ma">&rsaquo;</span>
+          </button>
+          <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:10px;">
+            Already registered? Enter your phone &amp; OTP to access your dashboard.
+          </div>
+        </div>
+
+        <!-- Vendor Register option -->
+        <div id="vendor-register-opt" style="display:none;">
+          <button class="mbtn" onclick="showVendorRegister()">
+            <span class="mi">&#x1F3EA;</span>
+            <span class="ml">Register your Food Court</span>
+            <span class="ma">&rsaquo;</span>
+          </button>
+          <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:10px;">
+            New vendor? Register with your FC details, phone &amp; UPI ID.
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <div id="s-phone" class="pstep">
@@ -129,7 +166,54 @@
       <button class="lcta" id="gcta" onclick="doGoogle()" disabled>Continue &rarr;</button>
     </div>
 
-    <div id="s-vendor-code" class="pstep">
+    <!-- ── Step: Vendor Registration form ── -->
+    <div id="s-vendor-register" class="pstep" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span class="bk" onclick="backMethod()">&larr; Back</span>
+        <span style="font-size:13px;color:var(--text2);font-weight:600;">Register Food Court</span>
+      </div>
+      <div class="ig" style="margin-bottom:10px;">
+        <div class="ilbl">Food Court</div>
+        <select class="ainp" id="vreg-fc" style="cursor:pointer;">
+          <option value="">Select your Food Court</option>
+          <option value="FC1">FC1 — South Indian &amp; Snacks</option>
+          <option value="FC2">FC2 — Chinese &amp; Fast Food</option>
+          <option value="FC3">FC3 — Rolls &amp; Sandwiches</option>
+          <option value="FC4">FC4 — Beverages &amp; Desserts</option>
+        </select>
+      </div>
+      <div class="ig" style="margin-bottom:10px;">
+        <div class="ilbl">Your Name</div>
+        <input class="ainp" id="vreg-name" type="text" placeholder="e.g. Ravi Kumar"
+          maxlength="32" autocomplete="name">
+      </div>
+      <div class="ig" style="margin-bottom:10px;">
+        <div class="ilbl">Phone Number</div>
+        <div class="prow">
+          <div class="ccode">&#x1F1EE;&#x1F1F3; +91</div>
+          <input class="ainp" id="vreg-ph" type="tel" maxlength="10"
+            placeholder="10-digit number"
+            oninput="this.value=this.value.replace(/\D/g,'')">
+        </div>
+      </div>
+      <div class="ig" style="margin-bottom:10px;">
+        <div class="ilbl">UPI ID</div>
+        <input class="ainp" id="vreg-upi" type="text" placeholder="yourname@upi"
+          maxlength="64" autocomplete="off">
+      </div>
+      <div class="ig" style="margin-bottom:10px;">
+        <div class="ilbl">Admin Secret Code</div>
+        <input class="ainp" id="vreg-secret" type="password"
+          placeholder="Code given by KiitKaadda admin" maxlength="32">
+      </div>
+      <div id="vreg-err" style="font-size:12px;color:var(--accent);margin-bottom:8px;display:none;"></div>
+      <button class="lcta" onclick="submitVendorRegister()" style="width:100%;">
+        Send OTP to Verify &rarr;
+      </button>
+    </div>
+
+    <!-- ── Step: Vendor secret code (login path — after OTP) ── -->
+    <div id="s-vendor-code" class="pstep" style="display:none;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
         <span class="bk" onclick="backMethod()">← Back</span>
         <span style="font-size:13px;color:var(--text2);font-weight:600;">Vendor Verification</span>
