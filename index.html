@@ -44,7 +44,7 @@
           <span class="ml">Continue with Google</span>
           <span class="ma">&rsaquo;</span>
         </button>
-        <div class="divrow">
+        <div class="divrow" id="google-divider">
           <div class="divline"></div>
           <div class="divtxt">or</div>
           <div class="divline"></div>
@@ -104,13 +104,29 @@
       </div>
     </div>
 
+    <!-- Step: KIIT Email input (students only) -->
     <div id="s-google" class="gstep">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
         <span class="bk" onclick="backMethod()">&larr; Back</span>
-        <span style="font-size:13px;color:var(--text2);font-weight:600;">Choose Account</span>
+        <span style="font-size:13px;color:var(--text2);font-weight:600;">Student Login</span>
       </div>
-      <div id="gaccs"></div>
-      <button class="lcta" id="gcta" onclick="doGoogle()" disabled>Continue with Google &rarr;</button>
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:36px;margin-bottom:6px;">&#x1F393;</div>
+        <div style="font-family:var(--fh);font-size:16px;font-weight:700;color:var(--text);">Enter your KIIT Email</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Only @kiit.ac.in emails are allowed</div>
+      </div>
+      <div class="ig" style="margin-bottom:6px;">
+        <div class="ilbl">KIIT Email Address</div>
+        <input class="ainp" id="gemail-inp" type="email"
+          placeholder="yourname@kiit.ac.in"
+          autocomplete="email"
+          oninput="onGEmailInput(this.value)"
+          onkeydown="if(event.key==='Enter'&&!document.getElementById('gcta').disabled)doGoogle()">
+      </div>
+      <div id="gemail-err" style="font-size:12px;color:var(--accent);margin-bottom:8px;display:none;">
+        &#x274C; Only @kiit.ac.in emails are allowed
+      </div>
+      <button class="lcta" id="gcta" onclick="doGoogle()" disabled>Continue &rarr;</button>
     </div>
 
     <!-- IDs must match script.js exactly: s-vsecret / vsecret-inp / vsecret-btn / verVendorSecret() -->

@@ -105,16 +105,34 @@ async function initFirebaseAuth() {
   }
 }
 
-/* ── Ensure reCAPTCHA is ready ── */
+/* ── Ensure reCAPTCHA is ready ──
+   IMPORTANT:
+   • size:"invisible" means NO visible checkbox — it runs silently in background.
+   • We do NOT pre-render on page load — only create it when user actually
+     taps "Send OTP", to avoid the widget appearing before it's needed.
+   • On any failure we destroy and recreate it so the next attempt works.
+── */
 async function ensureRecaptcha() {
-  if (recaptchaVerifier) return;
   await initFirebaseAuth();
-  recaptchaVerifier = new _RecaptchaVerifier(
-    fbAuth,
-    "recaptcha-container",    // the <div id="recaptcha-container"> in index.html
-    { size: "invisible" }
-  );
-  await recaptchaVerifier.render(); // pre-render so first sendOtp is instant
+  if (!recaptchaVerifier) {
+    recaptchaVerifier = new _RecaptchaVerifier(fbAuth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => {},          // OTP sent successfully
+      'expired-callback': () => {  // token expired — reset so next try works
+        resetRecaptcha();
+      }
+    });
+  }
+}
+
+function resetRecaptcha() {
+  try {
+    if (recaptchaVerifier) { recaptchaVerifier.clear(); }
+  } catch(e) {}
+  recaptchaVerifier = null;
+  /* Also wipe the container so Firebase can re-inject cleanly */
+  const c = document.getElementById('recaptcha-container');
+  if (c) c.innerHTML = '';
 }
 
 /* ══ MENU DATA ════════════════════════════════════════════════ */
@@ -242,7 +260,7 @@ function switchNav(tab) {
 /* ══ LOGIN FLOW ════════════════════════════════════════════════
 
    Student path:
-     selRole('student') → showGoogle() → pickGA() → doGoogle()
+     selRole('student') → showGoogle() → types @kiit.ac.in email → doGoogle()
                         → showPhone()  → sendOtp() → verOtp()
        → showName() → finLogin() → launchApp()
 
@@ -258,13 +276,16 @@ function selRole(r) {
   document.getElementById('rt-student').classList.toggle('active', r==='student');
   document.getElementById('rt-vendor').classList.toggle('active',  r==='vendor');
 
-  /* Hide Google login for vendors; show for students */
-  const gBtn = document.getElementById('google-btn');
-  if (gBtn) gBtn.style.display = (r === 'vendor') ? 'none' : '';
+  /* For vendors: hide Google/email button AND the "or" divider — phone only */
+  const isVendor = r === 'vendor';
+  const gBtn  = document.getElementById('google-btn');
+  const gDiv  = document.getElementById('google-divider');
+  if (gBtn) gBtn.style.display  = isVendor ? 'none' : '';
+  if (gDiv) gDiv.style.display  = isVendor ? 'none' : '';
 
   /* Hide referral field for vendors */
   const rr = document.getElementById('ref-row');
-  if (rr) rr.style.display = (r === 'vendor') ? 'none' : '';
+  if (rr) rr.style.display = isVendor ? 'none' : '';
 
   backMethod();
 }
@@ -284,43 +305,51 @@ function showPhone() {
   document.getElementById('oe').style.display = 'none';
   document.getElementById('pe').style.display = '';
   setTimeout(() => document.getElementById('ph').focus(), 100);
-  /* Pre-warm reCAPTCHA in the background */
-  ensureRecaptcha().catch(() => {});
 }
 
 /* ── sendOtp: called when user taps "Send OTP →" ── */
-async function sendOtp(){
+async function sendOtp() {
+  let num = document.getElementById('ph').value.trim().replace(/\D/g, '');
+  if (num.length !== 10) {
+    toast('⚠️ Enter a valid 10-digit number', 'e');
+    return;
+  }
+  const phone = '+91' + num;
 
- let num = document.getElementById("ph").value.trim();
- num = num.replace(/\D/g,'');
+  /* Show loading state */
+  const btn = document.getElementById('send-otp-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
- if(num.length < 10){
-   alert("Enter valid phone number");
-   return;
- }
+  try {
+    await ensureRecaptcha();
+    confirmationResult = await _signInWithPhoneNumber(fbAuth, phone, recaptchaVerifier);
 
- num = num.slice(-10);
+    /* Success — show OTP input */
+    document.getElementById('opd').textContent = phone;
+    document.getElementById('pe').style.display = 'none';
+    document.getElementById('oe').style.display = 'block';
+    document.getElementById('o0').focus();
+    toast('📱 OTP sent to ' + phone, 's');
 
- const phone = "+91" + num;
+  } catch(err) {
+    console.error('sendOtp error:', err);
 
- setBtnLoading('send-otp-btn', true, 'Sending...');
+    /* Reset captcha so user can try again without refreshing */
+    resetRecaptcha();
 
- try{
+    /* Show a human-readable error */
+    const code = err.code || '';
+    let msg = '❌ Failed to send OTP. Please try again.';
+    if (code === 'auth/invalid-phone-number')  msg = '❌ Invalid phone number. Check and retry.';
+    if (code === 'auth/too-many-requests')     msg = '⏳ Too many attempts. Wait a minute and retry.';
+    if (code === 'auth/captcha-check-failed')  msg = '❌ Captcha failed. Please retry.';
+    if (code === 'auth/quota-exceeded')        msg = '⚠️ SMS quota exceeded. Try later.';
+    toast(msg, 'e');
 
-   await ensureRecaptcha();
-
-   confirmationResult =
-     await _signInWithPhoneNumber(fbAuth, phone, recaptchaVerifier);
-
-   document.getElementById('pe').style.display='none';
-   document.getElementById('oe').style.display='block';
-
- }
-
- catch(err){
-   console.error(err);
- }
-
+  } finally {
+    /* Restore button regardless of success/failure */
+    if (btn) { btn.disabled = false; btn.textContent = 'Send OTP →'; }
+  }
 }
 
 function backPe() {
@@ -412,47 +441,51 @@ function verVendorCode() {
 /* Alias so internal calls to verVendorSecret() still work */
 const verVendorSecret = verVendorCode;
 
-/* ── showGoogle: show demo account picker ── */
+/* ── showGoogle: show KIIT email input step ── */
 function showGoogle() {
   document.getElementById('s-method').style.display = 'none';
   const el = document.getElementById('s-google');
   el.style.display = 'flex'; el.classList.add('on');
-  selGA = null;
   document.getElementById('gcta').disabled = true;
-
-  /* Demo KIIT accounts — replace with real Google sign-in popup if needed */
-  const GACCS = [
-    {name:'Naveen Kumar', email:'naveen.kumar@kiit.ac.in', ini:'NK'},
-    {name:'Priya Sharma', email:'priya.sharma@kiit.ac.in', ini:'PS'},
-    {name:'Arjun Patel',  email:'arjun.patel@kiit.ac.in',  ini:'AP'},
-  ];
-  document.getElementById('gaccs').innerHTML = GACCS.map((a,i) => `
-    <div class="gacc" id="ga${i}" onclick="pickGA(${i})">
-      <div class="gav">${a.ini}</div>
-      <div class="gai"><div class="gan">${a.name}</div><div class="gae">${a.email}</div></div>
-      <div class="gck">&#x2713;</div>
-    </div>`).join('');
-  /* Store GACCS on window so pickGA/doGoogle can access it */
-  window._GACCS = GACCS;
+  const inp = document.getElementById('gemail-inp');
+  if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 120); }
+  const err = document.getElementById('gemail-err');
+  if (err) err.style.display = 'none';
 }
 
-function pickGA(i) {
-  selGA = i;
-  document.querySelectorAll('.gacc').forEach((el,j) => el.classList.toggle('sel', i===j));
-  document.getElementById('gcta').disabled = false;
+/* Called on every keystroke in the email input */
+function onGEmailInput(val) {
+  const err  = document.getElementById('gemail-err');
+  const gcta = document.getElementById('gcta');
+  const v    = val.trim().toLowerCase();
+  const ok   = v.length > 0 && v.endsWith('@kiit.ac.in');
+  /* Show error only after user has typed enough to look like an email */
+  if (err) err.style.display = (v.includes('@') && !ok) ? 'block' : 'none';
+  if (gcta) gcta.disabled = !ok;
 }
 
+/* pickGA kept as no-op so any leftover reference won't crash */
+function pickGA() {}
+
+/* ── doGoogle: validate email then proceed to name step ── */
 function doGoogle() {
-  if (selGA === null) return;
-  const a = window._GACCS[selGA];
-  if (!a.email.endsWith('@kiit.ac.in')) {
-    toast('&#x274C; Only @kiit.ac.in emails are allowed', 'e');
+  const inp = document.getElementById('gemail-inp');
+  const email = inp ? inp.value.trim().toLowerCase() : '';
+  if (!email.endsWith('@kiit.ac.in')) {
+    const err = document.getElementById('gemail-err');
+    if (err) err.style.display = 'block';
+    toast('Only @kiit.ac.in emails are allowed', 'e');
     return;
   }
   usr.method = 'google';
-  usr.gemail = a.email;
-  document.getElementById('ni').value = a.name;
-  document.getElementById('ncta').disabled = false;
+  usr.gemail = email;
+  /* Pre-fill name from email local-part (e.g. "naveen.kumar" → "Naveen Kumar") */
+  const local    = email.split('@')[0];
+  const autoName = local.split(/[._]/).map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  const ni       = document.getElementById('ni');
+  if (ni) { ni.value = autoName; }
+  const ncta = document.getElementById('ncta');
+  if (ncta) ncta.disabled = autoName.trim().length < 2;
   showName();
 }
 
@@ -910,9 +943,11 @@ Object.assign(window, {
   oi,
   ok,
   verOtp,
+  resetRecaptcha,
   showGoogle,
   pickGA,
   doGoogle,
+  onGEmailInput,
   showVendorSecret,
   verVendorSecret,
   verVendorCode,
@@ -956,8 +991,6 @@ Object.assign(window, {
   } else {
     document.getElementById('login-ov').style.display = 'flex';
     document.getElementById('app').style.display      = 'none';
-    /* Warm up Firebase Auth + reCAPTCHA in background
-       so the first OTP send is instant */
-    ensureRecaptcha().catch(() => {});
+    /* Firebase Auth will be lazily initialized when user taps Send OTP */
   }
 })();
