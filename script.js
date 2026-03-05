@@ -181,7 +181,7 @@ const AK = 'kk_auth', DK = 'kk_data';
 let usr   = {role:'student', method:'', phone:'', gemail:'', name:'', in:false, refCode:'', coins:0};
 let state = {cart:{}, fc:'FC1', cat:'All', coins:0, hist:[]};
 let lRole = 'student';
-
+let selGA = null;   // index of selected Google account
 
 /* ══ PERSIST ══════════════════════════════════════════════════ */
 function ldAuth()  {
@@ -271,7 +271,7 @@ function selRole(r) {
 
 function backMethod() {
   document.getElementById('s-method').style.display = '';
-  ['s-phone','s-google','s-name','s-vsecret'].forEach(id => {
+  ['s-phone','s-google','s-name','s-vendor-code'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.style.display = 'none'; el.classList.remove('on'); }
   });
@@ -390,66 +390,76 @@ function showVendorSecret() {
     const el = document.getElementById(id);
     if (el) { el.style.display = 'none'; el.classList.remove('on'); }
   });
-  const el = document.getElementById('s-vsecret');
-  el.style.display = 'flex'; el.classList.add('on');
-  setTimeout(() => document.getElementById('vsecret-inp').focus(), 120);
+  const el = document.getElementById('s-vendor-code');
+  if (el) { el.style.display = 'flex'; el.classList.add('on'); }
+  setTimeout(() => { const inp = document.getElementById('vc-inp'); if(inp) inp.focus(); }, 120);
 }
 
-/* ── verVendorSecret: validate secret code ── */
-function verVendorSecret() {
-  const entered = document.getElementById('vsecret-inp').value.trim();
+/* ── verVendorCode: validate secret code (called by onclick="verVendorCode()") ── */
+function verVendorCode() {
+  const entered = document.getElementById('vc-inp').value.trim();
+  const errEl   = document.getElementById('vc-err');
   if (entered !== VENDOR_SECRET) {
-    toast('❌ Incorrect vendor secret code', 'e');
-    document.getElementById('vsecret-inp').value = '';
-    document.getElementById('vsecret-btn').disabled = true;
+    if (errEl) errEl.style.display = 'block';
+    document.getElementById('vc-inp').value = '';
+    document.getElementById('vc-cta').disabled = true;
     return;
   }
-  toast('✅ Vendor verified!', 's');
-  /* Proceed to name entry */
+  if (errEl) errEl.style.display = 'none';
+  toast('&#x2705; Vendor verified!', 's');
   showName();
 }
+/* Alias so internal calls to verVendorSecret() still work */
+const verVendorSecret = verVendorCode;
 
-/* ── showGoogle ── */
+/* ── showGoogle: show demo account picker ── */
+function showGoogle() {
+  document.getElementById('s-method').style.display = 'none';
+  const el = document.getElementById('s-google');
+  el.style.display = 'flex'; el.classList.add('on');
+  selGA = null;
+  document.getElementById('gcta').disabled = true;
 
+  /* Demo KIIT accounts — replace with real Google sign-in popup if needed */
+  const GACCS = [
+    {name:'Naveen Kumar', email:'naveen.kumar@kiit.ac.in', ini:'NK'},
+    {name:'Priya Sharma', email:'priya.sharma@kiit.ac.in', ini:'PS'},
+    {name:'Arjun Patel',  email:'arjun.patel@kiit.ac.in',  ini:'AP'},
+  ];
+  document.getElementById('gaccs').innerHTML = GACCS.map((a,i) => `
+    <div class="gacc" id="ga${i}" onclick="pickGA(${i})">
+      <div class="gav">${a.ini}</div>
+      <div class="gai"><div class="gan">${a.name}</div><div class="gae">${a.email}</div></div>
+      <div class="gck">&#x2713;</div>
+    </div>`).join('');
+  /* Store GACCS on window so pickGA/doGoogle can access it */
+  window._GACCS = GACCS;
+}
 
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup 
-} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+function pickGA(i) {
+  selGA = i;
+  document.querySelectorAll('.gacc').forEach((el,j) => el.classList.toggle('sel', i===j));
+  document.getElementById('gcta').disabled = false;
+}
 
-async function doGoogle(){
-
-const provider = new firebase.auth.GoogleAuthProvider();
-
-try{
-
-const result = await firebase.auth().signInWithPopup(provider);
-
-const user = result.user;
-
-if(!user.email.endsWith("@kiit.ac.in")){
-    alert("Only KIIT students allowed");
-    firebase.auth().signOut();
+function doGoogle() {
+  if (selGA === null) return;
+  const a = window._GACCS[selGA];
+  if (!a.email.endsWith('@kiit.ac.in')) {
+    toast('&#x274C; Only @kiit.ac.in emails are allowed', 'e');
     return;
-}
-
-console.log("Logged in:", user.email);
-
-showMainApp();
-
-}catch(e){
-
-console.error(e);
-alert("Google login failed");
-
-}
+  }
+  usr.method = 'google';
+  usr.gemail = a.email;
+  document.getElementById('ni').value = a.name;
+  document.getElementById('ncta').disabled = false;
+  showName();
 }
 
 /* ── showName: transition to name entry step ── */
 function showName() {
   document.getElementById('s-method').style.display = 'none';
-  ['s-phone','s-google','s-vsecret'].forEach(id => {
+  ['s-phone','s-google','s-vendor-code'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.style.display = 'none'; el.classList.remove('on'); }
   });
@@ -905,6 +915,7 @@ Object.assign(window, {
   doGoogle,
   showVendorSecret,
   verVendorSecret,
+  verVendorCode,
   finLogin,
   /* app */
   logout,
@@ -950,15 +961,3 @@ Object.assign(window, {
     ensureRecaptcha().catch(() => {});
   }
 })();
-function loginWithKiitEmail(){
-
-const email = document.getElementById("kiit-email").value.trim();
-
-if(!email.endsWith("@kiit.ac.in")){
-    alert("Only KIIT students allowed");
-    return;
-}
-
-doGoogle(email);
-
-}

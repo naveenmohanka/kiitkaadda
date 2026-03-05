@@ -21,17 +21,9 @@
 </head>
 <body>
 
-<!-- Toast container -->
 <div class="tcon" id="tc"></div>
-
-<!--
-  Invisible reCAPTCHA mount-point for Firebase Phone Auth.
-  Must be in <body> BEFORE script.js runs. RecaptchaVerifier
-  targets this element by ID.
--->
 <div id="recaptcha-container"></div>
 
-<!-- LOGIN OVERLAY -->
 <div id="login-ov">
   <div class="lcard">
     <div class="llogo">
@@ -40,34 +32,16 @@
       <div class="lt">Order from KIIT Food Courts &middot; Skip the Queue</div>
     </div>
 
-    <!-- Role tabs -->
     <div class="rtabs">
       <div class="rtab active" id="rt-student" onclick="selRole('student')">&#x1F393; Student</div>
-      <div class="rtab" id="rt-vendor" onclick="selRole('vendor')">&#x1F9D1;&#x200D;&#x1F373; Vendor</div>
+      <div class="rtab"        id="rt-vendor"  onclick="selRole('vendor')">&#x1F9D1;&#x200D;&#x1F373; Vendor</div>
     </div>
 
-    <!-- Step: Method -->
     <div id="s-method">
       <div class="lmethods">
-        <button class="mbtn" onclick="doGoogle()">
-<span class="mi">&#xf535;</span>
-<span class="ml">Continue with Google</span>
-</button>
-
-<div id="kiit-login" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;">
-
-<input
-id="kiit-email"
-type="email"
-placeholder="Enter your KIIT email (example@kiit.ac.in)"
-style="padding:12px; border-radius:10px; border:none; outline:none; font-size:14px;">
-
-<button onclick="loginWithKiitEmail()" class="primary-btn">
-Continue
-</button>
-
-</div>
-        </span>
+        <button class="mbtn" id="google-btn" onclick="showGoogle()">
+          <span class="mi">&#x1F535;</span>
+          <span class="ml">Continue with Google</span>
           <span class="ma">&rsaquo;</span>
         </button>
         <div class="divrow">
@@ -81,7 +55,6 @@ Continue
           <span class="ma">&rsaquo;</span>
         </button>
       </div>
-      <!-- Referral code field - hidden for vendors via selRole() -->
       <div id="ref-row" style="margin-top:12px;">
         <div class="ig">
           <div class="ilbl">Referral Code <span style="color:var(--muted);font-weight:400;text-transform:none;">(optional)</span></div>
@@ -93,14 +66,11 @@ Continue
       </div>
     </div>
 
-    <!-- Step: Phone number + OTP -->
     <div id="s-phone" class="pstep">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
         <span class="bk" onclick="backMethod()">&larr; Back</span>
         <span style="font-size:13px;color:var(--text2);font-weight:600;">Phone Login</span>
       </div>
-
-      <!-- Sub-step: enter phone -->
       <div id="pe">
         <div class="ig" style="margin-bottom:10px;">
           <div class="ilbl">Phone Number</div>
@@ -111,10 +81,8 @@ Continue
               oninput="this.value=this.value.replace(/\D/g,'')">
           </div>
         </div>
-        <button class="lcta" onclick="sendOtp()">Send OTP &rarr;</button>
+        <button class="lcta" id="send-otp-btn" onclick="sendOtp()">Send OTP &rarr;</button>
       </div>
-
-      <!-- Sub-step: enter OTP -->
       <div id="oe" style="display:none;animation:fU .3s ease">
         <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">
           OTP sent to
@@ -136,7 +104,6 @@ Continue
       </div>
     </div>
 
-    <!-- Step: Google (KIIT email only) -->
     <div id="s-google" class="gstep">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
         <span class="bk" onclick="backMethod()">&larr; Back</span>
@@ -146,37 +113,33 @@ Continue
       <button class="lcta" id="gcta" onclick="doGoogle()" disabled>Continue with Google &rarr;</button>
     </div>
 
-    <!-- Step: Vendor Secret Code (shown after OTP verified for vendor role) -->
-    <div id="s-vendor-code" style="display:none;">
+    <!-- IDs must match script.js exactly: s-vsecret / vsecret-inp / vsecret-btn / verVendorSecret() -->
+    <div id="s-vsecret" class="pstep">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-        <span class="bk" onclick="backMethod()">&larr; Back</span>
+        <span class="bk" onclick="backMethod()">← Back</span>
         <span style="font-size:13px;color:var(--text2);font-weight:600;">Vendor Verification</span>
       </div>
-      <div class="nsico">&#x1F510;</div>
+      <div class="nsico">🔐</div>
       <div class="nstit" style="text-align:center;margin-bottom:6px;">Vendor Access Code</div>
       <div class="nssub" style="text-align:center;margin-bottom:16px;">
         Enter the secret code provided<br>by the KiitKaadda admin.
       </div>
       <div class="ig" style="width:100%;margin-bottom:8px;">
         <div class="ilbl">Secret Code</div>
-        <input class="ainp" id="vc-inp" type="password"
+        <input class="ainp" id="vsecret-inp" type="password"
           placeholder="Enter vendor secret code"
           maxlength="32"
-          oninput="document.getElementById('vc-cta').disabled=this.value.trim().length<3"
-          onkeydown="if(event.key==='Enter')verVendorCode()">
+          oninput="document.getElementById('vsecret-btn').disabled=this.value.trim().length<3"
+          onkeydown="if(event.key==='Enter')verVendorSecret()">
       </div>
-      <div id="vc-err" style="font-size:12px;color:var(--accent);margin-bottom:8px;display:none;">
-        &#x274C; Incorrect code. Please try again.
-      </div>
-      <button class="lcta" id="vc-cta" onclick="verVendorCode()" disabled style="width:100%;">
-        Access Dashboard &#x1F9D1;&#x200D;&#x1F373;
+      <button class="lcta" id="vsecret-btn" onclick="verVendorSecret()" disabled style="width:100%;">
+        Access Dashboard 🧑‍🍳
       </button>
       <div style="font-size:11px;color:var(--muted);margin-top:10px;text-align:center;">
         Contact admin if you don't have the code.
       </div>
     </div>
 
-    <!-- Step: Name entry -->
     <div id="s-name" class="nstep">
       <div class="nsico">&#x1F44B;</div>
       <div class="nstit">What's your name?</div>
@@ -194,11 +157,12 @@ Continue
       </button>
     </div>
 
-    <div class="lfoot">By continuing you agree to our Terms &middot; <span style="color:var(--accent)">KiitKaadda</span> &middot; KIIT University</div>
+    <div class="lfoot">By continuing you agree to our Terms &middot;
+      <span style="color:var(--accent)">KiitKaadda</span> &middot; KIIT University
+    </div>
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div class="shell" id="app" style="display:none;">
   <div class="sbar">
     <span id="clk">9:41</span>
@@ -208,7 +172,6 @@ Continue
 
   <div class="shell-body">
 
-  <!-- HOME -->
   <div class="screen active" id="sc-home">
     <div class="scroll">
       <div class="hdr">
@@ -225,8 +188,6 @@ Continue
         <span>&#x1F50D;</span>
         <input type="text" placeholder="Search dishes, stalls&#x2026;" id="srchi" oninput="doSearch(this.value)">
       </div>
-
-      <!-- PWA install banner -->
       <div id="iban" class="iban" onclick="trigInst()" style="display:none;">
         <div class="iico">&#x1F4F2;</div>
         <div class="itxt">
@@ -235,7 +196,6 @@ Continue
         </div>
         <div class="idis" onclick="event.stopPropagation();disInst()">&#x2715;</div>
       </div>
-
       <div style="font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:20px 24px 10px;">Food Courts</div>
       <div class="fcg">
         <div class="fcc a1" onclick="openMenu('FC1')">
@@ -263,8 +223,6 @@ Continue
           <div class="fc-qr" onclick="event.stopPropagation();copyQR('FC4')" title="Copy QR link">&#x1F517;</div>
         </div>
       </div>
-
-      <!-- Coins banner -->
       <div class="cban" onclick="showReferral()">
         <div class="cleft">
           <div class="ctit">&#x1FA99; Reward Coins</div>
@@ -275,20 +233,16 @@ Continue
           <div class="clbl">coins</div>
         </div>
       </div>
-
-      <!-- Referral card -->
       <div class="ref-card" id="ref-card" style="display:none;">
         <div class="ref-title">&#x1F381; Your Referral Code</div>
         <div class="ref-code" id="ref-code-disp">&#x2013;&#x2013;&#x2013;&#x2013;</div>
         <div class="ref-sub">Share this code &middot; Both of you get 20 coins when they sign up!</div>
         <button class="ref-copy-btn" onclick="copyReferralCode()">&#x1F4CB; Copy Code</button>
       </div>
-
       <div style="height:20px;"></div>
     </div>
   </div>
 
-  <!-- MENU -->
   <div class="screen" id="sc-menu" style="position:relative;">
     <div class="mhero">
       <div class="back" onclick="goTo('sc-home')">&larr; Back</div>
@@ -313,7 +267,6 @@ Continue
     </div>
   </div>
 
-  <!-- CART -->
   <div class="screen" id="sc-cart">
     <div class="chdr">
       <div class="back" onclick="goTo('sc-menu')" style="margin:0;">&larr;</div>
@@ -351,13 +304,11 @@ Continue
     </div>
   </div>
 
-  <!-- ORDERS -->
   <div class="screen" id="sc-orders">
     <div class="ohdr"><div class="otit">Your Orders</div></div>
     <div class="scroll"><div class="olist" id="olist"></div></div>
   </div>
 
-  <!-- CONFIRM -->
   <div class="screen" id="sc-confirm">
     <div class="conwrap">
       <div class="conanim">&#x2713;</div>
@@ -377,7 +328,6 @@ Continue
     </div>
   </div>
 
-  <!-- PROFILE -->
   <div class="screen" id="sc-profile">
     <div class="psec"><div class="ptit">Profile</div></div>
     <div class="scroll">
@@ -403,9 +353,8 @@ Continue
     </div>
   </div>
 
-  </div><!-- end shell-body -->
+  </div>
 
-  <!-- BOTTOM NAV -->
   <div class="bnav">
     <div class="ni active" id="nv-home"    onclick="switchNav('home')">   <div class="ni-icon">&#x1F3E0;</div><div class="ni-lbl">Home</div></div>
     <div class="ni"        id="nv-cart"    onclick="switchNav('cart')">   <div class="ni-icon">&#x1F6D2;</div><div class="nbadge" id="nbadge">0</div><div class="ni-lbl">Cart</div></div>
@@ -414,8 +363,7 @@ Continue
   </div>
 </div>
 
-<!-- Plain script tag - all functions are global, inline onclick handlers work -->
-<script type="module" src="script.js"></script>
-<div id="recaptcha-container"></div>
+<!-- NOT type="module" — dynamic import() inside script.js still works fine -->
+<script src="script.js"></script>
 </body>
 </html>
