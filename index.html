@@ -129,8 +129,7 @@
       <button class="lcta" id="gcta" onclick="doGoogle()" disabled>Continue &rarr;</button>
     </div>
 
-    <!-- IDs must match script.js exactly: s-vsecret / vsecret-inp / vsecret-btn / verVendorSecret() -->
-    <div id="s-vsecret" class="pstep">
+    <div id="s-vendor-code" class="pstep">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
         <span class="bk" onclick="backMethod()">← Back</span>
         <span style="font-size:13px;color:var(--text2);font-weight:600;">Vendor Verification</span>
@@ -142,13 +141,13 @@
       </div>
       <div class="ig" style="width:100%;margin-bottom:8px;">
         <div class="ilbl">Secret Code</div>
-        <input class="ainp" id="vsecret-inp" type="password"
+        <input class="ainp" id="vc-inp" type="password"
           placeholder="Enter vendor secret code"
           maxlength="32"
-          oninput="document.getElementById('vsecret-btn').disabled=this.value.trim().length<3"
-          onkeydown="if(event.key==='Enter')verVendorSecret()">
+          oninput="document.getElementById('vc-cta').disabled=this.value.trim().length<3"
+          onkeydown="if(event.key==='Enter')verVendorCode()">
       </div>
-      <button class="lcta" id="vsecret-btn" onclick="verVendorSecret()" disabled style="width:100%;">
+      <button class="lcta" id="vc-cta" onclick="verVendorCode()" disabled style="width:100%;">
         Access Dashboard 🧑‍🍳
       </button>
       <div style="font-size:11px;color:var(--muted);margin-top:10px;text-align:center;">
