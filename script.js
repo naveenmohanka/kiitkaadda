@@ -181,7 +181,7 @@ const AK = 'kk_auth', DK = 'kk_data';
 let usr   = {role:'student', method:'', phone:'', gemail:'', name:'', in:false, refCode:'', coins:0};
 let state = {cart:{}, fc:'FC1', cat:'All', coins:0, hist:[]};
 let lRole = 'student';
-let selGA = null;
+
 
 /* ══ PERSIST ══════════════════════════════════════════════════ */
 function ldAuth()  {
@@ -410,25 +410,7 @@ function verVendorSecret() {
 }
 
 /* ── showGoogle ── */
-function showGoogle() {
-  document.getElementById('s-method').style.display = 'none';
-  const el = document.getElementById('s-google');
-  el.style.display = 'flex'; el.classList.add('on');
-  selGA = null;
-  document.getElementById('gcta').disabled = true;
-  document.getElementById('gaccs').innerHTML = GACCS.map((a,i) => `
-    <div class="gacc" id="ga${i}" onclick="pickGA(${i})">
-      <div class="gav">${a.ini}</div>
-      <div class="gai"><div class="gan">${a.name}</div><div class="gae">${a.email}</div></div>
-      <div class="gck">✓</div>
-    </div>`).join('');
-}
 
-function pickGA(i) {
-  selGA = i;
-  document.querySelectorAll('.gacc').forEach((el,j) => el.classList.toggle('sel', i===j));
-  document.getElementById('gcta').disabled = false;
-}
 
 import { 
   getAuth, 
