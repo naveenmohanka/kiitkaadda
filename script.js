@@ -310,20 +310,22 @@ function showVendorRegister() {
 
 /* ── submitVendorRegister: validate form then send OTP to the entered number ── */
 async function submitVendorRegister() {
-  const fc     = document.getElementById('vreg-fc').value.trim();
-  const name   = document.getElementById('vreg-name').value.trim();
-  const ph     = document.getElementById('vreg-ph').value.trim().replace(/\D/g,'');
-  const upi    = document.getElementById('vreg-upi').value.trim();
-  const secret = document.getElementById('vreg-secret').value.trim();
-  const errEl  = document.getElementById('vreg-err');
+  const fc      = document.getElementById('vreg-fc').value.trim();
+  const name    = document.getElementById('vreg-name').value.trim();
+  const ph      = document.getElementById('vreg-ph').value.trim().replace(/\D/g,'');
+  const upi     = document.getElementById('vreg-upi').value.trim();
+  const secret  = document.getElementById('vreg-secret').value.trim();
+  const secret2 = document.getElementById('vreg-secret2').value.trim();
+  const errEl   = document.getElementById('vreg-err');
 
   /* Validate */
   let err = '';
-  if (!fc)               err = '⚠️ Please select your Food Court';
-  else if (name.length < 2) err = '⚠️ Please enter your name';
+  if (!fc)                   err = '⚠️ Please select your Food Court';
+  else if (name.length < 2)  err = '⚠️ Please enter your name';
   else if (ph.length !== 10) err = '⚠️ Enter a valid 10-digit phone number';
   else if (!upi.includes('@')) err = '⚠️ Enter a valid UPI ID (e.g. name@upi)';
-  else if (secret !== VENDOR_SECRET) err = '❌ Incorrect admin secret code';
+  else if (secret.length < 4) err = '⚠️ Secret code must be at least 4 characters';
+  else if (secret !== secret2) err = '❌ Secret codes do not match';
 
   if (err) {
     errEl.textContent = err; errEl.style.display = 'block';
@@ -331,13 +333,11 @@ async function submitVendorRegister() {
   }
   errEl.style.display = 'none';
 
-  /* Store registration data — will be committed in finLogin() */
-  vendorRegData = { fc, name, upi, phone: ph };
+  /* Store registration data — secret saved per-vendor, not a global code */
+  vendorRegData = { fc, name, upi, phone: ph, secret };
 
-  /* Use the shared phone OTP flow — pre-fill the phone field */
+  /* Pre-fill phone and send OTP */
   document.getElementById('ph').value = ph;
-
-  /* Show phone step in OTP-sending state directly */
   document.getElementById('s-vendor-register').style.display = 'none';
   document.getElementById('s-vendor-register').classList.remove('on');
   const phoneEl = document.getElementById('s-phone');
@@ -345,8 +345,6 @@ async function submitVendorRegister() {
   document.getElementById('pe').style.display = 'none';
   document.getElementById('oe').style.display = 'none';
 
-  /* Send OTP */
-  const btn = document.createElement('div'); // dummy — sendOtp uses 'send-otp-btn' id
   const realBtn = document.getElementById('send-otp-btn');
   if (realBtn) { realBtn.disabled = true; realBtn.textContent = 'Sending…'; }
 
@@ -363,10 +361,9 @@ async function submitVendorRegister() {
     resetRecaptcha();
     const code = err2.code || '';
     let msg = '❌ Failed to send OTP. Please retry.';
-    if (code === 'auth/too-many-requests') msg = '⏳ Too many attempts. Wait a minute.';
+    if (code === 'auth/too-many-requests')    msg = '⏳ Too many attempts. Wait a minute.';
     if (code === 'auth/invalid-phone-number') msg = '❌ Invalid phone number.';
     toast(msg, 'e');
-    /* Go back to register form */
     document.getElementById('s-phone').style.display = 'none';
     document.getElementById('s-vendor-register').style.display = 'flex';
     document.getElementById('s-vendor-register').classList.add('on');
@@ -484,7 +481,19 @@ async function verOtp() {
         toast('✅ Phone verified!', 's');
         showName();
       } else {
-        /* Login: still need secret code check */
+        /* Login: load saved vendor data by phone, then check secret code */
+        const savedRaw = localStorage.getItem(AK);
+        if (savedRaw) {
+          try { Object.assign(usr, JSON.parse(savedRaw)); } catch(e) {}
+        }
+        /* If phone matches saved vendor, their secret is now in usr.secret */
+        const verifiedPhone = firebasePhone.replace('+91','');
+        if (usr.phone && usr.phone !== verifiedPhone) {
+          /* Different phone — clear stale data */
+          usr = {role:'vendor', method:'phone', phone: verifiedPhone, name:'', in:false, coins:0};
+        } else {
+          usr.phone = verifiedPhone;
+        }
         toast('✅ Phone verified!', 's');
         showVendorSecret();
       }
@@ -516,21 +525,29 @@ function showVendorSecret() {
   setTimeout(() => { const inp = document.getElementById('vc-inp'); if(inp) inp.focus(); }, 120);
 }
 
-/* ── verVendorCode: validate secret code (called by onclick="verVendorCode()") ── */
+/* ── verVendorCode: validate secret code on LOGIN path ── */
 function verVendorCode() {
   const entered = document.getElementById('vc-inp').value.trim();
   const errEl   = document.getElementById('vc-err');
-  if (entered !== VENDOR_SECRET) {
-    if (errEl) errEl.style.display = 'block';
+
+  /* Check against vendor's own saved secret (set during registration) */
+  const savedSecret = usr.secret || '';
+  if (!savedSecret) {
+    /* No saved secret means vendor hasn't registered yet */
+    if (errEl) { errEl.textContent = '❌ Phone not registered. Please register first.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (entered !== savedSecret) {
+    if (errEl) { errEl.textContent = '❌ Incorrect secret code. Try again.'; errEl.style.display = 'block'; }
     document.getElementById('vc-inp').value = '';
     document.getElementById('vc-cta').disabled = true;
     return;
   }
   if (errEl) errEl.style.display = 'none';
-  toast('&#x2705; Vendor verified!', 's');
+  toast('✅ Vendor verified!', 's');
   showName();
 }
-/* Alias so internal calls to verVendorSecret() still work */
+/* Alias */
 const verVendorSecret = verVendorCode;
 
 /* ── showGoogle: show KIIT email input step ── */
@@ -618,11 +635,12 @@ function finLogin() {
 
   /* Save vendor registration data if this is a new registration */
   if (lRole === 'vendor' && vendorMode === 'register' && vendorRegData.fc) {
-    usr.fc   = vendorRegData.fc;
-    usr.upi  = vendorRegData.upi;
-    usr.name = vendorRegData.name || name; // prefer name from registration form
+    usr.fc     = vendorRegData.fc;
+    usr.upi    = vendorRegData.upi;
+    usr.name   = vendorRegData.name || name;
+    usr.secret = vendorRegData.secret; // vendor's own chosen secret code
     document.getElementById('ni').value = usr.name;
-    vendorRegData = {}; // clear
+    vendorRegData = {};
   }
 
   /* Assign referral code if new student */
