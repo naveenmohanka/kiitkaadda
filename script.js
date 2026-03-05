@@ -430,34 +430,33 @@ function pickGA(i) {
   document.getElementById('gcta').disabled = false;
 }
 
-window.doGoogle = async function(){
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup 
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
- const provider = new firebase.auth.GoogleAuthProvider();
+async function doGoogle(){
 
- try{
+  const provider = new GoogleAuthProvider();
 
-   const result = await firebase.auth().signInWithPopup(provider);
-   const user = result.user;
+  try{
 
-   const email = user.email;
+    const result = await signInWithPopup(fbAuth, provider);
+    const user = result.user;
 
-   if(!email.endsWith("@kiit.ac.in")){
-     alert("Only KIIT students allowed");
-     return;
-   }
+    if(!user.email.endsWith("@kiit.ac.in")){
+      alert("Only KIIT students allowed");
+      return;
+    }
 
-   document.getElementById("login-ov").style.display="none";
-   document.getElementById("app").style.display="block";
+    document.getElementById("login-ov").style.display="none";
+    document.getElementById("app").style.display="block";
 
-   usr.name = user.displayName;
-   usr.gemail = email;
-   usr.in = true;
-
- }
- catch(e){
-   console.error(e);
-   alert("Google login failed");
- }
+  }catch(err){
+    console.error(err);
+    alert("Google login failed");
+  }
 
 }
 
