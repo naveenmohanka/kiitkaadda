@@ -481,19 +481,11 @@ async function verOtp() {
         toast('✅ Phone verified!', 's');
         showName();
       } else {
-        /* Login: load saved vendor data by phone, then check secret code */
-        const savedRaw = localStorage.getItem(AK);
-        if (savedRaw) {
-          try { Object.assign(usr, JSON.parse(savedRaw)); } catch(e) {}
-        }
-        /* If phone matches saved vendor, their secret is now in usr.secret */
+        /* Login: usr was already loaded from localStorage in init() via ldAuth().
+           Just update the verified phone — secret and other data are already in usr. */
         const verifiedPhone = firebasePhone.replace('+91','');
-        if (usr.phone && usr.phone !== verifiedPhone) {
-          /* Different phone — clear stale data */
-          usr = {role:'vendor', method:'phone', phone: verifiedPhone, name:'', in:false, coins:0};
-        } else {
-          usr.phone = verifiedPhone;
-        }
+        usr.phone  = verifiedPhone;
+        usr.method = 'phone';
         toast('✅ Phone verified!', 's');
         showVendorSecret();
       }
@@ -533,7 +525,6 @@ function verVendorCode() {
   /* Check against vendor's own saved secret (set during registration) */
   const savedSecret = usr.secret || '';
   if (!savedSecret) {
-    /* No saved secret means vendor hasn't registered yet */
     if (errEl) { errEl.textContent = '❌ Phone not registered. Please register first.'; errEl.style.display = 'block'; }
     return;
   }
@@ -545,7 +536,16 @@ function verVendorCode() {
   }
   if (errEl) errEl.style.display = 'none';
   toast('✅ Vendor verified!', 's');
-  showName();
+
+  /* Returning vendor already has name — skip name step, go straight to dashboard */
+  if (usr.name && usr.in) {
+    usr.role = 'vendor';
+    svAuth();
+    toast('🧑‍🍳 Welcome back, ' + usr.name + '!', 's');
+    setTimeout(() => { window.location.href = 'vendor.html'; }, 800);
+  } else {
+    showName();
+  }
 }
 /* Alias */
 const verVendorSecret = verVendorCode;
